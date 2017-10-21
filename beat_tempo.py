@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys #kwargs
 
 import numpy as np
+import scipy as scipy
 import scipy as sp
 # import keras only if we need DNN
 import matplotlib.pyplot as plt
@@ -11,40 +12,56 @@ import matplotlib.pyplot as plt
 # https://github.com/librosa/librosa
 import librosa
 import librosa.display
+import pandas as pd
 
 def main():
     # Track beats using time series input
-
     song = 'song.mp3'
-    y, sr = librosa.load(song)
-
-    tempo, beats = librosa.beat.beat_track(y=y, sr=sr)
-
-
-    onset_env = librosa.onset.onset_strength(y, sr=sr,
+    y1, sr1 = librosa.load(song)
+    onset_env1 = librosa.onset.onset_strength(y1, sr=sr1,
                                              aggregate=np.median)
-    tempo, beats = librosa.beat.beat_track(onset_envelope=onset_env,
-                                           sr=sr)
+    tempo1, beats1 = librosa.beat.beat_track(y=y1, sr=sr1)
 
-    onset_max = np.argmax(onset_env)
+    song2 = 'song3.mp3'
+    y2, sr2 = librosa.load(song2)
+    tempo2, beats2 = librosa.beat.beat_track(y=y2, sr=sr2)
+    onset_env2 = librosa.onset.onset_strength(y2, sr=sr2,
+                                             aggregate=np.median)
+    song1pattern = []
 
-    starting_beat = find_nearest(beats, onset_max)
-    print(starting_beat)
-    range = (beats[starting_beat], beats[starting_beat + 8])
+    numzeros = 0
+    for i in onset_env1:
+        if i < 0.5:
+            numzeros += 1
+        else:
+            song1pattern.append(numzeros)
+            numzeros = 0
 
-    # start_time = librosa.frames_to_time(range[0], sr=sr)
-    # end_time = librosa.frames_to_time(range[1], sr=sr)
-    # print(start_time, end_time)
-    # mel_spectrogram(mp3=song, start_time=start_time, end_time=end_time)
+    np.savetxt("pattern1.csv", song1pattern, delimiter=",")
 
-    play_by_seconds(song,108,120)
-    print(librosa.time_to_frames(108, sr=sr))
-    print(librosa.time_to_frames(120, sr=sr))
+    song2pattern = []
+
+    numzeros = 0
+    for i in onset_env2:
+        if i < 0.5:
+            numzeros += 1
+        else:
+            song2pattern.append(numzeros)
+            numzeros = 0
 
 
-def find_nearest(array, value):
-    idx = (np.abs(array - value)).argmin()
-    return idx #array[idx]
+    # plt.plot(song1pattern)
+    # plt.ylabel("Frames between beats")
+    # plt.xlabel("Frames")
+    #
+    # plt.plot(song2pattern)
+    # plt.ylabel("Frames between beats")
+    # plt.xlabel("Frames")
+    # plt.show()
+
+    print(combinations_from_array(song1pattern, 3))
+    print(check_combo(song1pattern,combinations_from_array(song1pattern, 3)))
+
 
 def mel_spectrogram(mp3 = "", display = True, start_time=0, end_time=0):
     '''
@@ -92,6 +109,22 @@ def play_by_seconds(mp3, start_time, end_time):
     y, sr = librosa.load(path=mp3, offset=start_time, duration=end_time - start_time)
     librosa.output.write_wav('slice.wav', y, sr)
 
+def combinations_from_array(array, combo):
+    comboArray = []
+    for i in range(len(array)-combo):
+        arraycombo = []
 
+        for k in range(combo):
+            arraycombo.append(array[k+i])
+        comboArray.append(arraycombo)
+    return comboArray
+
+def check_combo(originalArray,comparisonArray):
+    matchesArray = []
+    for combo in comparisonArray:
+        matches = 0
+        if comparisonArray[]:
+        matchesArray.append()
+    return matchesArray
 if __name__ == '__main__':
     main()
