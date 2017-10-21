@@ -4,11 +4,8 @@ import sys #kwargs
 
 import numpy as np
 import scipy as sp
-# import keras only if we need DNN
 import matplotlib.pyplot as plt
 
-# Librosa is a music analysis tool
-# https://github.com/librosa/librosa
 import librosa
 import librosa.display
 
@@ -37,24 +34,11 @@ def mel_spectrogram(mp3 = sys.argv[2], display = True):
     # Convert to log scale (dB). We'll use the peak power as reference.
     log_S = librosa.logamplitude(S, ref_power=np.max)
 
-    # Make a new figure
-    plt.figure(figsize=(12,4))
-
-    # Display the spectrogram on a mel scale
-    # sample rate and hop length parameters are used to render the time axis
-    librosa.display.specshow(log_S, sr=sr, x_axis='time', y_axis='mel')
-
-    # Put a descriptive title on the plot
-    plt.title('mel power spectrogram')
-
-    # draw a color bar
-    plt.colorbar(format='%+02.0f dB')
-
-    # Make the figure layout compact
-    plt.tight_layout()
-
     # display
     if display:
+        plt.figure(figsize=(12, 4))
+        librosa.display.specshow(log_S, sr=sr, x_axis='time', y_axis='mel')
+        plt.tight_layout()
         plt.show()
 
 if __name__ == '__main__':
