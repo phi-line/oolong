@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 
+import os
 import numpy as np
 import librosa
 import librosa.display
 from scipy.misc import toimage
-from skimage import io
 from skimage.color import rgb2gray
 
 
@@ -17,45 +17,46 @@ def main():
     path = 'smbu.mp3'
 
     y, sr = librosa.load(path=path, offset=109.12, duration=3.529)
-    S = librosa.feature.melspectrogram(y, sr=sr, n_mels=128)
-    slice = librosa.logamplitude(S, ref_power=np.min)
+    S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
+    mel_slice = librosa.logamplitude(S, ref_power=np.min)
+    # display_spec(slice, sr)
+
     librosa.output.write_wav('slice.wav', y, sr)
-    display_spec(slice, sr)
+    filename = os.path.join(os.getcwd(), 'slice.jpg')
+    slice = imsave(filename, rgb2gray(mel_slice))
+
 
     y, sr = librosa.load(path=path, offset=109.12, duration=3.529*4)
-    S = librosa.feature.melspectrogram(y, sr=sr, n_mels=128)
-    original = librosa.logamplitude(S, ref_power=np.min)
-    librosa.output.write_wav('slice.wav', y, sr)
+    S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
+    mel_original = librosa.logamplitude(S, ref_power=np.min)
     # display_spec(original, sr)
 
-    imsave("slice.jpg", rgb2gray(slice))
-    imsave("original.jpg", rgb2gray(slice))
+    librosa.output.write_wav('original.wav', y, sr)
+    filename = os.path.join(os.getcwd(), 'original.jpg')
+    original = imsave(filename, rgb2gray(mel_original))
 
-    image_manip(slice, original)
-    # flann(slice, original)
+    # feat_censure(mel_slice, mel_original)
+    # brute(slice, original)
+    flann(slice, original)
 
-def image_manip(slice, original):
+def feat_censure(slice, original):
     from skimage.feature import CENSURE
-
     import matplotlib.pyplot as plt
-
-    img_orig = slice
-    img_warp = original
 
     detector = CENSURE()
 
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))
 
-    detector.detect(img_orig)
+    detector.detect(slice)
 
-    ax[0].imshow(img_orig, cmap=plt.cm.gray)
+    ax[0].imshow(slice, cmap=plt.cm.gray)
     ax[0].scatter(detector.keypoints[:, 1], detector.keypoints[:, 0],
                   2 ** detector.scales, facecolors='none', edgecolors='r')
     ax[0].set_title("Sliced Image")
 
-    detector.detect(img_warp)
+    detector.detect(original)
 
-    ax[1].imshow(img_warp, cmap=plt.cm.gray)
+    ax[1].imshow(original, cmap=plt.cm.gray)
     ax[1].scatter(detector.keypoints[:, 1], detector.keypoints[:, 0],
                   2 ** detector.scales, facecolors='none', edgecolors='r')
     ax[1].set_title('Original Image')
@@ -66,13 +67,41 @@ def image_manip(slice, original):
     plt.tight_layout()
     plt.show()
 
-def flann(slice, original):
-    import numpy as np
+def brute(slice, original):
     import cv2
     from matplotlib import pyplot as plt
 
-    img1 = cv2.imread('slice.', 0)  # queryImage
-    img2 = cv2.imread('original', 0)  # trainImage
+    img1 = cv2.cvtColor(cv2.imread(slice), cv2.COLOR_BGR2GRAY)
+    img2 = cv2.cvtColor(cv2.imread(original), cv2.COLOR_BGR2GRAY)
+
+    # Initiate SIFT detector
+    sift = cv2.xfeatures2d.SIFT_create()
+
+    # find the keypoints and descriptors with SIFT
+    kp1, des1 = sift.detectAndCompute(img1, None)
+    kp2, des2 = sift.detectAndCompute(img2, None)
+
+    # BFMatcher with default params
+    bf = cv2.BFMatcher()
+    matches = bf.knnMatch(des1, des2, k=2)
+
+    # Apply ratio test
+    good = []
+    for m, n in matches:
+        if m.distance < 0.75 * n.distance:
+            good.append([m])
+
+    # cv2.drawMatchesKnn expects list of lists as matches.
+    img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None)
+
+    plt.imshow(img3), plt.show()
+
+def flann(slice, original):
+    import cv2
+    from matplotlib import pyplot as plt
+
+    img1 = cv2.cvtColor(cv2.imread(slice), cv2.COLOR_BGR2GRAY)
+    img2 = cv2.cvtColor(cv2.imread(original), cv2.COLOR_BGR2GRAY)
 
     # Initiate SIFT detector
     sift = cv2.xfeatures2d.SIFT_create()
@@ -91,7 +120,7 @@ def flann(slice, original):
     matches = flann.knnMatch(des1, des2, k=2)
 
     # Need to draw only good matches, so create a mask
-    matchesMask = [[0, 0] for i in xrange(len(matches))]
+    matchesMask = [[0, 0] for i in range(len(matches))]
 
     # ratio test as per Lowe's paper
     for i, (m, n) in enumerate(matches):
@@ -117,12 +146,6 @@ def display_spec(S, sr):
     # librosa.display.specshow(librosa.logamplitude(S, ref=np.max), y_axis='log')
     # plt.tight_layout()
     # plt.show()
-
-def normalize(v):
-    norm=np.linalg.norm(v, ord=2)
-    if norm==0:
-        norm=np.finfo(v.dtype).eps
-    return v/norm
 
 def imsave(name, arr):
     im = toimage(arr)
