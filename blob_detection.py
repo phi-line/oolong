@@ -17,25 +17,27 @@ def main():
     path = 'smbu.mp3'
 
     y, sr = librosa.load(path=path, offset=109.12, duration=3.529)
+    y = librosa.effects.percussive(y)
     S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
     mel_slice = librosa.logamplitude(S, ref_power=np.min)
-    # display_spec(slice, sr)
+    # display_spec(mel_slice, sr)
 
     librosa.output.write_wav('slice.wav', y, sr)
-    filename = os.path.join(os.getcwd(), 'slice.jpg')
+    filename = os.path.join(os.getcwd(), 'slice.png')
     slice = imsave(filename, rgb2gray(mel_slice))
 
 
     y, sr = librosa.load(path=path, offset=109.12, duration=3.529*4)
+    y = librosa.effects.percussive(y)
     S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
     mel_original = librosa.logamplitude(S, ref_power=np.min)
-    # display_spec(original, sr)
+    # display_spec(mel_original, sr)
 
     librosa.output.write_wav('original.wav', y, sr)
-    filename = os.path.join(os.getcwd(), 'original.jpg')
+    filename = os.path.join(os.getcwd(), 'original.png')
     original = imsave(filename, rgb2gray(mel_original))
 
-    # feat_censure(mel_slice, mel_original)
+    feat_censure(mel_slice, mel_original)
     # brute(slice, original)
     flann(slice, original)
 
