@@ -17,9 +17,9 @@ from collections import defaultdict
 
 def main():
     # Track beats using time series input
-    song = 'songs/song.mp3'
+    song = 'songs/Attention.mp3'
 
-    song2 = 'songs/song4.mp3'
+    song2 = 'songs/AttentionPaino.mp3'
 
     # plt.plot(song1pattern)
     # plt.ylabel("Frames between beats")
@@ -29,9 +29,10 @@ def main():
     # plt.ylabel("Frames between beats")
     # plt.xlabel("Frames")
     # plt.show()
-
-    findPattern(song,10)
-    findPattern(song2,10)
+    y, sr = librosa.load(song)
+    findPattern(y,sr,song,20)
+    y1, sr2 = librosa.load(song2)
+    findPattern(y1,sr2,song2,20)
 
 
 def mel_spectrogram(mp3 = "", display = True, start_time=0, end_time=0):
@@ -95,14 +96,14 @@ def findCombo(comboArray,comboNum):
     comboDict = dict()
     for index in range(len(comboArray)):
         comboDict[index] = 0
-    copyArray = comboArray
-    length = len(copyArray)
+    comboArray
+    length = len(comboArray)
     index = 0
     comboIndex = 1
     while index < length - comboNum:
         while comboIndex < length:
-            if copyArray[index] == copyArray[comboIndex]:
-                del copyArray[comboIndex]
+            if comboArray[index] == comboArray[comboIndex]:
+                del comboArray[comboIndex]
                 comboDict[index] += 1
                 length = len(comboArray)
             comboIndex += 1
@@ -110,11 +111,9 @@ def findCombo(comboArray,comboNum):
         comboIndex = index + 1
     return comboDict
 
-def findPattern(song,combo):
-    y, sr = librosa.load(song)
+def findPattern(y,sr,song,combo):
     onset_env = librosa.onset.onset_strength(y, sr=sr,
                                               aggregate=np.median)
-    print("loaded onset")
     songArray = []
 
     numzeros = 0
@@ -126,19 +125,32 @@ def findPattern(song,combo):
             numzeros = 0
 
     songcombo = combinations_from_array(songArray, combo)
+    length = len(songcombo)
     comboDict = findCombo(songcombo, combo)
-    print(songcombo)
-    print(comboDict)
     max_value = max(comboDict.values())  # maximum value
-    max_keys = [k for k, v in comboDict.items() if v == max_value]
+    if max_value < 5:
+        return findPattern(y,sr,song, combo - 1)
+    max_keys = [k for k, v in comboDict.items() if v == max_value] #gets the most common combo
     print(max_value, songcombo[max_keys[0]])
-    patternIndex = max_keys[0] * combo  # pattern starts here
-    songpattern = songArray[0:patternIndex + combo + 1]
-    print(sum(songpattern))
-    print(sum(songcombo[max_keys[0]]))
 
-    play_by_frame(song, sr, sum(songpattern), sum(songpattern) + (sum(songcombo[max_keys[0]]) + 1) * combo * 2)
-    print(songArray)
+    combomatch = songcombo[max_keys[0]]
+    matches = 0
+    matchIndex = 0
+    index = 0
+    songcombo = combinations_from_array(songArray, combo)
+
+    while index < length - combo:
+        if songcombo[index] == combomatch:
+            matches += 1
+        if matches == 3:
+            matchIndex = index
+            index = length
+        index += 1
+
+    patternIndex = matchIndex  # pattern starts here
+    print(patternIndex, matchIndex, matches)
+    print(len(songcombo))
+    play_by_frame(song, sr, patternIndex, patternIndex + sum(combomatch)*combo)
 
 if __name__ == '__main__':
     main()
