@@ -39,7 +39,7 @@ def main():
 
     feat_censure(mel_slice, mel_original)
     # brute(slice, original)
-    flann(slice, original)
+    # flann(slice, original)
 
 def feat_censure(slice, original):
     from skimage.feature import CENSURE
@@ -50,6 +50,8 @@ def feat_censure(slice, original):
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))
 
     detector.detect(slice)
+    hist_feature(detector.keypoints, slice)
+    return
 
     ax[0].imshow(slice, cmap=plt.cm.gray)
     ax[0].scatter(detector.keypoints[:, 1], detector.keypoints[:, 0],
@@ -137,6 +139,21 @@ def flann(slice, original):
     img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, matches, None, **draw_params)
 
     plt.imshow(img3, ), plt.show()
+
+def hist_feature(kp, slice):
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    x = kp[:, 1]
+    y = kp[:, 0]
+    # shape = np.dot(slice.shape, 1) #if we wanted to add a scalar
+
+    heatmap, xedges, yedges = np.histogram2d(x=x, y=y, bins=shape)
+    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+
+    plt.clf()
+    plt.imshow(heatmap.T, extent=extent, origin='lower', cmap=plt.cm.summer, interpolation="bilinear")
+    plt.show()
 
 
 def display_spec(S, sr):
