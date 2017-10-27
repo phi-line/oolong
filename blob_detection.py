@@ -17,7 +17,7 @@ def main():
     path = 'smbu.mp3'
 
     y, sr = librosa.load(path=path, offset=109.12, duration=3.529)
-    y = librosa.effects.percussive(y)
+    # y = librosa.effects.percussive(y)
     S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
     mel_slice = librosa.logamplitude(S, ref_power=np.min)
     # display_spec(mel_slice, sr)
@@ -28,7 +28,7 @@ def main():
 
 
     y, sr = librosa.load(path=path, offset=109.12, duration=3.529*4)
-    y = librosa.effects.percussive(y)
+    # y = librosa.effects.percussive(y)
     S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
     mel_original = librosa.logamplitude(S, ref_power=np.min)
     # display_spec(mel_original, sr)
@@ -47,11 +47,17 @@ def feat_censure(slice, original):
 
     detector = CENSURE()
 
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))
-
     detector.detect(slice)
-    hist_feature(detector.keypoints, slice)
+    kp = detector.keypoints
+    # hist_feature(detector.keypoints, slice)
+    xx, yy, zz = kd_feature(kp, 10.0)
+
+    plt.pcolormesh(xx, yy, zz)
+    plt.scatter(x=kp[:, 1], y=kp[:, 0], s=2, facecolor='white')
+    plt.show()
     return
+
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))
 
     ax[0].imshow(slice, cmap=plt.cm.gray)
     ax[0].scatter(detector.keypoints[:, 1], detector.keypoints[:, 0],
@@ -140,20 +146,42 @@ def flann(slice, original):
 
     plt.imshow(img3, ), plt.show()
 
-def hist_feature(kp, slice):
+def hist_feature(scatter, slice):
     import numpy as np
     import matplotlib.pyplot as plt
+    from scipy.stats import gaussian_kde
+    x = scatter[:, 1]; y = scatter[:, 0]
 
-    x = kp[:, 1]
-    y = kp[:, 0]
-    # shape = np.dot(slice.shape, 1) #if we wanted to add a scalar
+    # Calculate the point density
+    xy = np.vstack([x, y])
+    z = gaussian_kde(xy)(xy)
 
-    heatmap, xedges, yedges = np.histogram2d(x=x, y=y, bins=shape)
-    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+    # Sort the points by density, so that the densest points are plotted last
+    idx = z.argsort()
+    x, y, z = x[idx], y[idx], z[idx]
 
-    plt.clf()
-    plt.imshow(heatmap.T, extent=extent, origin='lower', cmap=plt.cm.summer, interpolation="bilinear")
+    plt.scatter(x, y, c=z)
     plt.show()
+
+def kd_feature(scatter, bandwidth, xbins=100j, ybins=100j, **kwargs):
+    """Build 2D kernel density estimate (KDE)."""
+    from sklearn.neighbors import KernelDensity
+
+    x = scatter[:, 1]; y = scatter[:, 0]
+
+    # create grid of sample locations (default: 100x100)
+    xx, yy = np.mgrid[x.min():x.max():xbins,
+             y.min():y.max():ybins]
+
+    xy_sample = np.vstack([yy.ravel(), xx.ravel()]).T
+    xy_train = np.vstack([y, x]).T
+
+    kde_skl = KernelDensity(bandwidth=bandwidth, **kwargs)
+    kde_skl.fit(xy_train)
+
+    # score_samples() returns the log-likelihood of the samples
+    z = np.exp(kde_skl.score_samples(xy_sample))
+    return xx, yy, np.reshape(z, xx.shape)
 
 
 def display_spec(S, sr):
