@@ -14,28 +14,31 @@ from skimage.color import rgb2gray
 # librosa.output.write_wav('slice.wav', y, sr)
 
 def main():
-    path = 'smbu.mp3'
+    song_folder = os.path.join(os.getcwd(), 'audio/')
+    song_path = os.path.join(song_folder, 'smbu.mp3')
 
-    y, sr = librosa.load(path=path, offset=109.12, duration=3.529)
+    y, sr = librosa.load(path=song_path, offset=109.12, duration=3.529)
     # y = librosa.effects.percussive(y)
     S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
     mel_slice = librosa.logamplitude(S, ref_power=np.min)
     # display_spec(mel_slice, sr)
 
-    librosa.output.write_wav('slice.wav', y, sr)
-    filename = os.path.join(os.getcwd(), 'slice.png')
-    slice = imsave(filename, rgb2gray(mel_slice))
+    audio = os.path.join(song_folder, 'slice.wav')
+    librosa.output.write_wav(audio, y, sr)
+    image = os.path.join(song_folder, 'slice.png')
+    slice = imsave(image, rgb2gray(mel_slice))
 
 
-    y, sr = librosa.load(path=path, offset=109.12, duration=3.529*4)
+    y, sr = librosa.load(path=song_path, offset=109.12, duration=3.529*4)
     # y = librosa.effects.percussive(y)
     S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
     mel_original = librosa.logamplitude(S, ref_power=np.min)
     # display_spec(mel_original, sr)
 
-    librosa.output.write_wav('original.wav', y, sr)
-    filename = os.path.join(os.getcwd(), 'original.png')
-    original = imsave(filename, rgb2gray(mel_original))
+    audio = os.path.join(song_folder, 'original.wav')
+    librosa.output.write_wav(audio, y, sr)
+    image = os.path.join(song_folder, 'original.png')
+    original = imsave(image, rgb2gray(mel_original))
 
     feat_censure(mel_slice, mel_original)
     # brute(slice, original)
@@ -76,35 +79,6 @@ def feat_censure(slice, original):
 
     plt.tight_layout()
     plt.show()
-
-def brute(slice, original):
-    import cv2
-    from matplotlib import pyplot as plt
-
-    img1 = cv2.cvtColor(cv2.imread(slice), cv2.COLOR_BGR2GRAY)
-    img2 = cv2.cvtColor(cv2.imread(original), cv2.COLOR_BGR2GRAY)
-
-    # Initiate SIFT detector
-    sift = cv2.xfeatures2d.SIFT_create()
-
-    # find the keypoints and descriptors with SIFT
-    kp1, des1 = sift.detectAndCompute(img1, None)
-    kp2, des2 = sift.detectAndCompute(img2, None)
-
-    # BFMatcher with default params
-    bf = cv2.BFMatcher()
-    matches = bf.knnMatch(des1, des2, k=2)
-
-    # Apply ratio test
-    good = []
-    for m, n in matches:
-        if m.distance < 0.75 * n.distance:
-            good.append([m])
-
-    # cv2.drawMatchesKnn expects list of lists as matches.
-    img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None)
-
-    plt.imshow(img3), plt.show()
 
 def flann(slice, original):
     import cv2
