@@ -47,37 +47,18 @@ def main():
 def feat_censure(slice, original):
     from skimage.feature import CENSURE
     import matplotlib.pyplot as plt
+    import matplotlib.colors as colors
 
     detector = CENSURE()
 
     detector.detect(slice)
     kp = detector.keypoints
     # hist_feature(detector.keypoints, slice)
-    xx, yy, zz = kd_feature(kp, 10.0)
+    xx, yy, zz = kd_feature(kp, 5.0)
 
     plt.pcolormesh(xx, yy, zz)
-    plt.scatter(x=kp[:, 1], y=kp[:, 0], s=2, facecolor='white')
-    plt.show()
-    return
-
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))
-
-    ax[0].imshow(slice, cmap=plt.cm.gray)
-    ax[0].scatter(detector.keypoints[:, 1], detector.keypoints[:, 0],
-                  2 ** detector.scales, facecolors='none', edgecolors='r')
-    ax[0].set_title("Sliced Image")
-
-    detector.detect(original)
-
-    ax[1].imshow(original, cmap=plt.cm.gray)
-    ax[1].scatter(detector.keypoints[:, 1], detector.keypoints[:, 0],
-                  2 ** detector.scales, facecolors='none', edgecolors='r')
-    ax[1].set_title('Original Image')
-
-    for a in ax:
-        a.axis('off')
-
-    plt.tight_layout()
+    plt.scatter(x=kp[:, 1], y=kp[:, 0], s=2 ** detector.scales, facecolor='white', alpha=.5)
+    plt.axis('off')
     plt.show()
 
 def flann(slice, original):
