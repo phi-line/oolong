@@ -15,10 +15,10 @@ from skimage.color import rgb2gray
 
 def main():
     song_folder = os.path.join(os.getcwd(), 'audio/')
-    song_path = os.path.join(song_folder, 'smbu.mp3')
+    song_path = os.path.join(song_folder, 'Song.mp3')
 
-    y, sr = librosa.load(path=song_path, offset=109.12, duration=3.529)
-    # y = librosa.effects.percussive(y)
+    y, sr = librosa.load(path=song_path, offset=109.12, duration=3.529*2)
+    y = librosa.effects.percussive(y)
     S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
     mel_slice = librosa.logamplitude(S, ref_power=np.min)
     # display_spec(mel_slice, sr)
@@ -30,7 +30,7 @@ def main():
 
 
     y, sr = librosa.load(path=song_path, offset=109.12, duration=3.529*4)
-    # y = librosa.effects.percussive(y)
+    y = librosa.effects.percussive(y)
     S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
     mel_original = librosa.logamplitude(S, ref_power=np.min)
     # display_spec(mel_original, sr)
@@ -46,17 +46,17 @@ def main():
 
 def feat_censure(slice, original):
     from skimage.feature import CENSURE
+    from sklearn.neighbors import KernelDensity
     import matplotlib.pyplot as plt
-    import matplotlib.colors as colors
 
     detector = CENSURE()
 
     detector.detect(slice)
     kp = detector.keypoints
     # hist_feature(detector.keypoints, slice)
-    xx, yy, zz = kd_feature(kp, 5.0)
+    xx, yy, zz = kd_feature(kp, 4.0, metric='manhattan')
 
-    plt.pcolormesh(xx, yy, zz)
+    plt.pcolormesh(xx, yy, zz, cmap=plt.cm.gist_heat)
     plt.scatter(x=kp[:, 1], y=kp[:, 0], s=2 ** detector.scales, facecolor='white', alpha=.5)
     plt.axis('off')
     plt.show()
