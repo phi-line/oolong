@@ -21,7 +21,7 @@ def main():
     y = librosa.effects.percussive(y)
     S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
     mel_slice = librosa.logamplitude(S, ref_power=np.min)
-    # display_spec(mel_slice, sr)
+    display_spec(mel_slice, sr)
 
     audio = os.path.join(song_folder, 'slice.wav')
     librosa.output.write_wav(audio, y, sr)
