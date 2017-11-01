@@ -34,12 +34,18 @@ def main():
 from self_similarity import segmentation
 
 def train_kde(genre, dir):
-    song_folder = os.path.join(os.getcwd(), dir)
-    song_path = os.path.join(song_folder, 'smbu.mp3')
+    songs = []
+    target = os.path.abspath(dir)
+    for root, subs, files in os.walk(target):
+        for f in files:
+            if os.path.splitext(f)[1] == '.mp3':
+                songs.append((f, os.path.join(target, f)))
+    print('Loaded {} songs'.format(len(songs)))
 
     #first send the batch to the trainer function to analyze song for it's major segments
-    segments = segmentation(path=song_path)
-    print(segments)
+    for song in songs:
+        print('Song: [{}] | Status: Segmenting'.format(song[0]), end='\r')
+        segments = segmentation(path=song[1])
 
     #then take a N beat slice from the spectrogram that is from the most major segment
 

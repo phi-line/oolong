@@ -28,23 +28,10 @@ def main():
     image = os.path.join(song_folder, 'slice.png')
     slice = imsave(image, rgb2gray(mel_slice))
 
+    feat_censure(mel_slice)
 
-    y, sr = librosa.load(path=song_path, offset=109.12, duration=3.529*4)
-    y = librosa.effects.percussive(y)
-    S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
-    mel_original = librosa.logamplitude(S, ref_power=np.min)
-    # display_spec(mel_original, sr)
-
-    audio = os.path.join(song_folder, 'original.wav')
-    librosa.output.write_wav(audio, y, sr)
-    image = os.path.join(song_folder, 'original.png')
-    original = imsave(image, rgb2gray(mel_original))
-
-    feat_censure(mel_slice, mel_original)
-
-def feat_censure(slice, original):
+def feat_censure(slice):
     from skimage.feature import CENSURE
-    from sklearn.neighbors import KernelDensity
     import matplotlib.pyplot as plt
 
     detector = CENSURE()
@@ -84,10 +71,6 @@ def display_spec(S, sr):
     librosa.display.specshow(S, sr=sr, x_axis='time', y_axis='mel')
     plt.tight_layout()
     plt.show()
-
-    # librosa.display.specshow(librosa.logamplitude(S, ref=np.max), y_axis='log')
-    # plt.tight_layout()
-    # plt.show()
 
 def imsave(name, arr):
     im = toimage(arr)

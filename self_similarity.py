@@ -10,7 +10,7 @@ song_path = os.path.join(song_folder, 'smbu.mp3')
 def main():
     segmentation()
 
-def segmentation(path=song_path, display=True):
+def segmentation(path=song_path, display=False):
     '''
     This function takes in a song and then returns a class containing the spectrogram, bpm, and major segements
     :param path: the specific file path to read from
