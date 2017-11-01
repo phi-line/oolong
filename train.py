@@ -21,10 +21,29 @@ def main():
                                      usage='%(prog)s house HousePlaylist/')
     parser.add_argument(dest="genre",
                         help="(string) classifier to train a model for")
-    parser.add_argument(dest="folder",
-                        help="(path) song files to analyze (grouped by genre)", metavar="[folder]",
+    parser.add_argument(dest="dir",
+                        help="(path) from root to folder containing song files to analyze", metavar="[dir]",
                         action=readable_dir)
     args = parser.parse_args()
+    if not args.genre and args.dir:
+        return
+
+    train_kde(args.genre, args.dir)
+    return
+
+from self_similarity import segmentation
+
+def train_kde(genre, dir):
+    song_folder = os.path.join(os.getcwd(), dir)
+    song_path = os.path.join(song_folder, 'smbu.mp3')
+
+    #first send the batch to the trainer function to analyze song for it's major segments
+    segments = segmentation(path=song_path)
+    print(segments)
+
+    #then take a N beat slice from the spectrogram that is from the most major segment
+
+    #return the feature scatterplot from the slice to the main script to be stored alongside each
     return
 
 class readable_dir(argparse.Action):
@@ -40,6 +59,7 @@ class readable_dir(argparse.Action):
             setattr(namespace,self.dest,prospective_dir)
         else:
             raise argparse.ArgumentTypeError("readable_dir:{0} is not a readable dir".format(prospective_dir))
+
 
 if __name__ == '__main__':
     main()
