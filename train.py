@@ -44,8 +44,9 @@ def train_kde(genre, dir):
 
     #first send the batch to the trainer function to analyze song for it's major segments
     for song in songs:
-        print('Song: [{}] | Status: Segmenting'.format(song[0]), end='\r')
+        update_status(song[0], 'Segmenting')
         segments = segmentation(path=song[1])
+        update_status(song[0], 'Slicing')
 
     #then take a N beat slice from the spectrogram that is from the most major segment
 
@@ -65,6 +66,9 @@ class readable_dir(argparse.Action):
             setattr(namespace,self.dest,prospective_dir)
         else:
             raise argparse.ArgumentTypeError("readable_dir:{0} is not a readable dir".format(prospective_dir))
+
+def update_status(song, status):
+    print('Analyzing [{}] | Status: {}'.format(song, 'Segmenting'), end='\r')
 
 
 if __name__ == '__main__':

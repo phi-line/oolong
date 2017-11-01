@@ -107,7 +107,9 @@ def segmentation(path=song_path, display=False):
                                            x_min=None,
                                            x_max=C.shape[1] - 1)
 
-    pairs = zip(bound_segs, bound_frames[:-1])
+    bound_times = librosa.frames_to_time(bound_frames)
+
+    pairs = zip(bound_segs, bound_times[:-1])
     seg_dict = dict()
     for seg, frame in pairs:
         seg_dict.setdefault(seg, []).append(frame)
