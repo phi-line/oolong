@@ -59,14 +59,15 @@ def train_kde(genre, dir):
     songs = []
     update = update_info(len(mp3s))
     for m in mp3s:
-        update.next(m[0], 'Loading')
+        update.next(m[0], (verbose_ and 'Loading'))
         song = Song(m[0], m[1])
         songs.append(song)
 
-        update.state('Segmenting')
+        verbose_ and update.state('Segmenting')
         segments = segmentation(song=song, display=display_)
+        print(segments)
 
-        update.state('Slicing')
+        verbose_ and update.state('Slicing')
 
     stdout.write('\x1b[2K')
     print('Analyzed {} songs'.format(len(songs)))
@@ -102,7 +103,7 @@ class update_info(object):
     def __next__(self):
         return self.next()
 
-    def next(self, name, status):
+    def next(self, name, status=''):
         if self.n < self.steps:
             self.n += 1
             self.name = name
@@ -112,7 +113,8 @@ class update_info(object):
 
     def state(self, status):
         stdout.write('\x1b[2K')
-        stdout.write('[{}/{}] {} | Status: {}\r'.format(self.n, self.steps, self.name, status))
+        s = '| Status: {}'.format(status) if status else ''  # fight me
+        stdout.write('[{}/{}] {} {}\r'.format(self.n, self.steps, self.name, s))
 
 if __name__ == '__main__':
     main()
