@@ -1,16 +1,12 @@
 from __future__ import print_function
 import librosa
 import librosa.display
-import os
 import heapq
-
-song_folder = os.path.join(os.getcwd(), 'audio/')
-song_path = os.path.join(song_folder, 'smbu.mp3')
 
 def main():
     segmentation()
 
-def segmentation(path=song_path, display=False):
+def segmentation(song, display=False):
     '''
     This function takes in a song and then returns a class containing the spectrogram, bpm, and major segements
     :param path: the specific file path to read from
@@ -24,7 +20,8 @@ def segmentation(path=song_path, display=False):
     import matplotlib.pyplot as plt
     import sklearn.cluster
 
-    y, sr = librosa.load(path=path)
+    y = song.load.y
+    sr = song.load.sr
 
     BINS_PER_OCTAVE = 12 * 3
     N_OCTAVES = 7
@@ -36,6 +33,8 @@ def segmentation(path=song_path, display=False):
     # To reduce dimensionality, we'll beat-synchronous the CQT
     tempo, beats = librosa.beat.beat_track(y=y, sr=sr, trim=False)
     Csync = librosa.util.sync(C, beats, aggregate=np.median)
+
+    song.bpm = tempo
 
     #####################################################################
     # Let's build a weighted recurrence matrix using beat-synchronous CQT
