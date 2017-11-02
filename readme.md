@@ -1,7 +1,7 @@
 ## Scripts:
 
 ### Train.py
-    usage: train.py house HousePlaylist/
+    usage: train.py house Playlist/
 
     This is a script that trains a Kernel Density Estimator based on song features
 
@@ -10,4 +10,6 @@
       [folder]    (path) song files to analyze (grouped by genre)
 
     optional arguments:
-      -h, --help  show this help message and exit
+      -h, --help     show this help message and exit
+      -d, --display  display matplotlib graphs
+      -v, --verbose  output individual steps to console

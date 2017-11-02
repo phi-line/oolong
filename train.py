@@ -9,7 +9,7 @@ verbose_ = False
 
 def main():
     '''
-    usage: train.py house HousePlaylist/
+    usage: train.py house Playlist/
 
     This is a script that trains a Kernel Density Estimator based on song features
 
