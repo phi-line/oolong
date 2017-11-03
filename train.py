@@ -6,6 +6,7 @@ import argparse
 from self_similarity import segmentation
 from song_classes import Song, Slice, beatTrack
 from features import Features
+from kernel_density import kde, kd_feature
 
 import matplotlib.pyplot as plt
 
@@ -45,10 +46,10 @@ def main():
     global display_; display_ = args.display
     global verbose_; verbose_ = args.verbose
 
-    train_kde(args.genre, args.dir)
+    train(args.genre, args.dir)
     return
 
-def train_kde(genre, dir, n_beats=4):
+def train(genre, dir, n_beats=8):
     mp3s = []
     target = os.path.abspath(dir)
     for root, subs, files in os.walk(target):
@@ -70,12 +71,10 @@ def train_kde(genre, dir, n_beats=4):
 
         # first send the batch to the trainer function to analyze song for it's major segments
         verbose_ and update.state('Segmenting')
-        duration = (song.beat_track.tempo / 60) * n_beats
+        duration = (60 / song.beat_track.tempo) * n_beats # beats per second
         max_pair = segment(song, duration)
 
-        if all(p == 0 for p in max_pair):
-            fail_count += 1
-            continue
+        if all(p == 0 for p in max_pair): fail_count += 1; continue
 
         # then take a N beat slice from the spectrogram that is from the most major segment
         verbose_ and update.state('Slicing')
@@ -85,12 +84,8 @@ def train_kde(genre, dir, n_beats=4):
         verbose_ and update.state('Scanning')
         song.slice.features = Features(song.slice)
 
-        verbose_ and update.state('Plotting')
-        kde(song.slice.features)
-
     stdout.write('\x1b[2K')
     print('Analyzed {} songs. Failed {} songs.'.format(len(songs) - fail_count, fail_count))
-
 
     #return the feature scatterplot from the slice to the main script to be stored alongside each
     return
@@ -107,18 +102,6 @@ def segment(song, duration):
                 max_pair = pair
 
     return max_pair
-
-from features import kd_feature
-def kde(features, bandwidth=5.0):
-    kp = features.kp
-    detector = features.detector
-
-    xx, yy, zz = kd_feature(kp, bandwidth, metric='manhattan')
-
-    plt.pcolormesh(xx, yy, zz)  # , cmap=plt.cm.gist_heat)
-    plt.scatter(x=kp[:, 1], y=kp[:, 0], s=2 ** detector.scales, facecolor='white', alpha=.5)
-    plt.axis('off')
-    plt.show()
 
 class readable_dir(argparse.Action):
     '''
