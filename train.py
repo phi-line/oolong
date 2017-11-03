@@ -3,7 +3,7 @@ from __future__ import print_function
 import os
 import argparse
 
-from self_similarity import segmentation
+from self_similarity import segment
 from song_classes import Song, Slice, beatTrack
 from features import Features
 from kernel_density import kde, kd_feature
@@ -37,6 +37,8 @@ def main():
                         action=readable_dir)
     parser.add_argument("-d", "--display", help="display matplotlib graphs",
                         action="store_true")
+    parser.add_argument("-p", "--preview", help="play a preview of the slice while scanning",
+                        action="store_true")
     parser.add_argument("-v", "--verbose", help="output individual steps to console",
                         action="store_true")
     args = parser.parse_args()
@@ -44,6 +46,7 @@ def main():
         return
 
     global display_; display_ = args.display
+    global preview_; preview_ = args.preview
     global verbose_; verbose_ = args.verbose
 
     train(args.genre, args.dir)
@@ -62,46 +65,40 @@ def train(genre, dir, n_beats=8):
     update = update_info(len(mp3s))
     fail_count = 0
     for m in mp3s:
-        update.next(m[0], (verbose_ and 'Loading'))
-        song = Song(m[0], m[1])
+        song = analyze_song(m, n_beats, update)
         songs.append(song)
-
-        verbose_ and update.state('Chunking')
-        song.beat_track = beatTrack(y=song.load.y, sr=song.load.sr)
-
-        # first send the batch to the trainer function to analyze song for it's major segments
-        verbose_ and update.state('Segmenting')
-        duration = (60 / song.beat_track.tempo) * n_beats # beats per second
-        max_pair = segment(song, duration)
-
-        if all(p == 0 for p in max_pair): fail_count += 1; continue
-
-        # then take a N beat slice from the spectrogram that is from the most major segment
-        verbose_ and update.state('Slicing')
-        song.slice = Slice(song.path, offset=max_pair[0], duration=duration)
-
-        # gather the features from the slice
-        verbose_ and update.state('Scanning')
-        song.slice.features = Features(song.slice)
 
     stdout.write('\x1b[2K')
     print('Analyzed {} songs. Failed {} songs.'.format(len(songs) - fail_count, fail_count))
 
     #return the feature scatterplot from the slice to the main script to be stored alongside each
+    if preview_:
+        for song in songs:
+            verbose_ and update.state('Plotting')
+            kde(song.slice.features)
+
     return
 
-def segment(song, duration):
-    song.segments = segmentation(song=song, display=display_)
+def analyze_song(mp3, n_beats, update):
+    update.next(mp3[0], (verbose_ and 'Loading'))
+    song = Song(mp3[0], mp3[1])
 
-    max_pair = (0, 0)
-    for k, dk in song.segments.items():
-        for pair in dk:
-            diff = pair[1] - pair[0]
-            max_diff = max_pair[1] - max_pair[0]
-            if (diff >= duration) & (diff > max_diff):
-                max_pair = pair
+    verbose_ and update.state('Chunking')
+    song.beat_track = beatTrack(y=song.load.y, sr=song.load.sr)
 
-    return max_pair
+    # first send the batch to the trainer function to analyze song for it's major segments
+    verbose_ and update.state('Segmenting')
+    duration = (60 / song.beat_track.tempo) * n_beats  # beats per second
+    max_pair = segment(song, duration, display_)
+
+    # then take a N beat slice from the spectrogram that is from the most major segment
+    verbose_ and update.state('Slicing')
+    song.slice = Slice(song.path, offset=max_pair[0], duration=duration)
+
+    # gather the features from the slice
+    verbose_ and update.state('Scanning')
+    song.slice.features = Features(song.slice)
+    return song
 
 class readable_dir(argparse.Action):
     '''

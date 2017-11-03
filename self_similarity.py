@@ -3,8 +3,18 @@ import librosa
 import librosa.display
 import heapq
 
-def main():
-    segmentation()
+def segment(song, duration, display):
+    song.segments = segmentation(song=song, display=display)
+
+    max_pair = (0, 0)
+    for k, dk in song.segments.items():
+        for pair in dk:
+            diff = pair[1] - pair[0]
+            max_diff = max_pair[1] - max_pair[0]
+            if (diff >= duration) & (diff > max_diff):
+                max_pair = pair
+
+    return max_pair
 
 def segmentation(song, display=False):
     '''
@@ -148,6 +158,3 @@ def segmentation(song, display=False):
         plt.show()
 
     return seg_dict
-
-if __name__ == '__main__':
-    main()
