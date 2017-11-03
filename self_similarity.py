@@ -106,9 +106,12 @@ def segmentation(song, display=False):
                                            x_min=None,
                                            x_max=C.shape[1] - 1)
 
-    bound_times = librosa.frames_to_time(bound_frames)
+    bound_tuples = []
+    for i in range(1, len(bound_frames)):
+        bound_tuples.append((bound_frames[i-1], bound_frames[i]-1))
+    bound_tuples = tuple(map(lambda x:librosa.frames_to_time(x),bound_tuples))
 
-    pairs = zip(bound_segs, bound_times[:-1])
+    pairs = zip(bound_segs, bound_tuples)
     seg_dict = dict()
     for seg, frame in pairs:
         seg_dict.setdefault(seg, []).append(frame)
@@ -119,10 +122,10 @@ def segmentation(song, display=False):
         plt.figure(figsize=(12, 4))
         colors = plt.get_cmap('Paired', k)
 
-        beat_times = librosa.frames_to_time(librosa.util.fix_frames(beats,
-                                                                x_min=0,
-                                                                x_max=C.shape[1]),
-                                        sr=sr)
+        # beat_times = librosa.frames_to_time(librosa.util.fix_frames(beats,
+        #                                                         x_min=0,
+        #                                                         x_max=C.shape[1]),
+        #                                 sr=sr)
 
         bound_times = librosa.frames_to_time(bound_frames)
         freqs = librosa.cqt_frequencies(n_bins=C.shape[0],

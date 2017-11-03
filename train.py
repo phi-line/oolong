@@ -3,6 +3,7 @@ from __future__ import print_function
 import os
 import argparse
 import string
+import numpy as np
 
 display_ = False
 verbose_ = False
@@ -46,7 +47,7 @@ def main():
 from self_similarity import segmentation
 from song_classes import Song
 
-def train_kde(genre, dir):
+def train_kde(genre, dir, n_beats=16):
     mp3s = []
     target = os.path.abspath(dir)
     for root, subs, files in os.walk(target):
@@ -55,24 +56,41 @@ def train_kde(genre, dir):
                 mp3s.append((f, os.path.join(target, f)))
     print('Loaded {} songs'.format(len(mp3s)))
 
-    #first send the batch to the trainer function to analyze song for it's major segments
     songs = []
     update = update_info(len(mp3s))
+    fail_count = 0
     for m in mp3s:
         update.next(m[0], (verbose_ and 'Loading'))
         song = Song(m[0], m[1])
         songs.append(song)
 
+        # first send the batch to the trainer function to analyze song for it's major segments
         verbose_ and update.state('Segmenting')
-        segments = segmentation(song=song, display=display_)
-        print(segments)
+        song.segments = segmentation(song=song, display=display_)
+
+        # get amt of seconds that would occupy n_beats (duration)
+        duration = (song.bpm/60) * n_beats
+
+        # then take a N beat slice from the spectrogram that is from the most major segment
+        max_pair = (0,0)
+        for k, dk in song.segments.items():
+            for pair in dk:
+                diff = pair[1] - pair[0]
+                max_diff = max_pair[1] - max_pair[0]
+                if (diff >= duration) & (diff > max_diff):
+                    max_pair = pair
+
+        if all(p == 0 for p in max_pair):
+            fail_count += 1
+            continue
+
+        # features = features(song=song)
 
         verbose_ and update.state('Slicing')
 
     stdout.write('\x1b[2K')
-    print('Analyzed {} songs'.format(len(songs)))
+    print('Analyzed {} songs. Failed {} songs.'.format(len(songs) - fail_count, fail_count))
 
-    #then take a N beat slice from the spectrogram that is from the most major segment
 
     #return the feature scatterplot from the slice to the main script to be stored alongside each
     return

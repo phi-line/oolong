@@ -5,6 +5,7 @@ class Song:
         self.name = name
         self.path = path
         self.load = Load(*load_song(path))
+        self.segments = []
         self.slice = None
         self.bpm = None
 
