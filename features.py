@@ -4,39 +4,40 @@ import os
 import numpy as np
 import librosa
 import librosa.display
-from scipy.misc import toimage
-from skimage.color import rgb2gray
 
+# Gathering features from slice
+from librosa import effects, feature, logamplitude
+from skimage.feature import CENSURE
 
-# y, sr = librosa.load(path=path, offset=109, duration=8.7272)#duration=8.8)
-# S = librosa.feature.melspectrogram(y, sr=sr, n_mels=128)
-# slice = librosa.logamplitude(S, ref_power=np.max)
-# librosa.output.write_wav('slice.wav', y, sr)
+class Features:
+    def __init__(self, slice):
+        detector, kp = self.getFeatures(slice)
+        self.detector = detector
+        self.kp = kp
 
-def main():
-    song_folder = os.path.join(os.getcwd(), 'audio/')
-    song_path = os.path.join(song_folder, 'smack_my_b.mp3')
-
-    y, sr = librosa.load(path=song_path, offset=109.12, duration=3.529*2)
-    y = librosa.effects.percussive(y)
-    S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
-    mel_slice = librosa.logamplitude(S, ref_power=np.max)
-    display_spec(mel_slice, sr)
-
-    audio = os.path.join(song_folder, 'slice.wav')
-    librosa.output.write_wav(audio, y, sr)
-    image = os.path.join(song_folder, 'slice.png')
-    slice = imsave(image, rgb2gray(mel_slice))
-
-    feat_censure(mel_slice)
+    @staticmethod
+    def getFeatures(slice, mels=256):
+        y, sr = tuple(slice)
+        y = effects.percussive(y)
+        S = feature.melspectrogram(y, sr=sr, n_mels=mels)
+        log_S = logamplitude(S, ref_power=np.max)
+        detector = CENSURE()
+        detector.detect(log_S)
+        kp = detector.keypoints
+        return detector, kp
 
 def feat_censure(slice):
     from skimage.feature import CENSURE
     import matplotlib.pyplot as plt
 
+    y, sr = tuple(slice)
+    y = librosa.effects.percussive(y)
+    S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
+    log_S = librosa.logamplitude(S, ref_power=np.max)
+
     detector = CENSURE()
 
-    detector.detect(slice)
+    detector.detect(log_S)
     kp = detector.keypoints
     xx, yy, zz = kd_feature(kp, 5.0, metric='manhattan')
 
@@ -72,18 +73,17 @@ def display_spec(S, sr):
     plt.tight_layout()
     plt.show()
 
-def imsave(name, arr):
-    im = toimage(arr)
-    im.save(name)
-    return name
+def main():
+    song_folder = os.path.join(os.getcwd(), 'audio/')
+    song_path = os.path.join(song_folder, 'smack_my_b.mp3')
 
-    # y, sr = librosa.load(path='Song.mp3')
-    # S = librosa.feature.melspectrogram(y, sr=sr, n_mels=128)
-    # img2 = librosa.logamplitude(S, ref_power=np.max)
+    y, sr = librosa.load(path=song_path, offset=109.12, duration=3.529*2)
+    y = librosa.effects.percussive(y)
+    S = librosa.feature.melspectrogram(y, sr=sr, n_mels=256)
+    mel_slice = librosa.logamplitude(S, ref_power=np.max)
+    display_spec(mel_slice, sr)
 
-def play_by_seconds(y, sr):
-    y, sr = librosa.load(path=mp3, offset=start_time, duration=end_time - start_time)
-    librosa.output.write_wav('slice.wav', y, sr)
+    feat_censure(mel_slice)
 
 if __name__ == '__main__':
     main()

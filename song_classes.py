@@ -1,3 +1,6 @@
+import numpy as np
+
+# Loading songs from a path
 from librosa import load, beat
 
 class Song:
@@ -15,11 +18,15 @@ class Load:
         self.y = y
         self.sr = sr
 
+    def __iter__(self):
+        return iter([self.y, self.sr])
+
 class Slice(Load):
     def __init__(self, path, offset=None, duration=None):
         Load.__init__(self, path, offset=offset, duration=duration)
         self.offset = offset
         self.duration = duration
+        self.features = None
 
 class beatTrack():
     def __init__(self, y, sr):

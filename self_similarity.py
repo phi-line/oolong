@@ -2,7 +2,6 @@ from __future__ import print_function
 import librosa
 import librosa.display
 import heapq
-from song_classes import beatTrack
 
 def main():
     segmentation()
@@ -23,6 +22,7 @@ def segmentation(song, display=False):
 
     y = song.load.y
     sr = song.load.sr
+    beat_track = song.beat_track
 
     BINS_PER_OCTAVE = 12 * 3
     N_OCTAVES = 7
@@ -32,8 +32,7 @@ def segmentation(song, display=False):
                                 ref=np.max)
 
     # To reduce dimensionality, we'll beat-synchronous the CQT
-    song.beat_track = beatTrack(y=y, sr=sr)
-    tempo, beats = tuple(song.beat_track)
+    tempo, beats = tuple(beat_track)
 
     Csync = librosa.util.sync(C, beats, aggregate=np.median)
 

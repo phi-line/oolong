@@ -2,8 +2,12 @@ from __future__ import print_function
 
 import os
 import argparse
-import string
-import numpy as np
+
+from self_similarity import segmentation
+from song_classes import Song, Slice, beatTrack
+from features import Features
+
+import matplotlib.pyplot as plt
 
 display_ = False
 verbose_ = False
@@ -44,10 +48,7 @@ def main():
     train_kde(args.genre, args.dir)
     return
 
-from self_similarity import segmentation
-from song_classes import Song, Slice
-
-def train_kde(genre, dir, n_beats=16):
+def train_kde(genre, dir, n_beats=4):
     mp3s = []
     target = os.path.abspath(dir)
     for root, subs, files in os.walk(target):
@@ -64,18 +65,28 @@ def train_kde(genre, dir, n_beats=16):
         song = Song(m[0], m[1])
         songs.append(song)
 
+        verbose_ and update.state('Chunking')
+        song.beat_track = beatTrack(y=song.load.y, sr=song.load.sr)
+
         # first send the batch to the trainer function to analyze song for it's major segments
         verbose_ and update.state('Segmenting')
-        max_pair, duration = segment(song, n_beats)
+        duration = (song.beat_track.tempo / 60) * n_beats
+        max_pair = segment(song, duration)
 
         if all(p == 0 for p in max_pair):
             fail_count += 1
             continue
 
+        # then take a N beat slice from the spectrogram that is from the most major segment
         verbose_ and update.state('Slicing')
         song.slice = Slice(song.path, offset=max_pair[0], duration=duration)
 
-        # features = features(song=song)
+        # gather the features from the slice
+        verbose_ and update.state('Scanning')
+        song.slice.features = Features(song.slice)
+
+        verbose_ and update.state('Plotting')
+        kde(song.slice.features)
 
     stdout.write('\x1b[2K')
     print('Analyzed {} songs. Failed {} songs.'.format(len(songs) - fail_count, fail_count))
@@ -84,12 +95,9 @@ def train_kde(genre, dir, n_beats=16):
     #return the feature scatterplot from the slice to the main script to be stored alongside each
     return
 
-def segment(song, n_beats):
+def segment(song, duration):
     song.segments = segmentation(song=song, display=display_)
 
-    duration = (song.beat_track.tempo / 60) * n_beats
-
-    # then take a N beat slice from the spectrogram that is from the most major segment
     max_pair = (0, 0)
     for k, dk in song.segments.items():
         for pair in dk:
@@ -98,7 +106,19 @@ def segment(song, n_beats):
             if (diff >= duration) & (diff > max_diff):
                 max_pair = pair
 
-    return (max_pair, duration)
+    return max_pair
+
+from features import kd_feature
+def kde(features, bandwidth=5.0):
+    kp = features.kp
+    detector = features.detector
+
+    xx, yy, zz = kd_feature(kp, bandwidth, metric='manhattan')
+
+    plt.pcolormesh(xx, yy, zz)  # , cmap=plt.cm.gist_heat)
+    plt.scatter(x=kp[:, 1], y=kp[:, 0], s=2 ** detector.scales, facecolor='white', alpha=.5)
+    plt.axis('off')
+    plt.show()
 
 class readable_dir(argparse.Action):
     '''
