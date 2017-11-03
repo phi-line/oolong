@@ -2,6 +2,7 @@ from __future__ import print_function
 import librosa
 import librosa.display
 import heapq
+from song_classes import beatTrack
 
 def main():
     segmentation()
@@ -31,10 +32,10 @@ def segmentation(song, display=False):
                                 ref=np.max)
 
     # To reduce dimensionality, we'll beat-synchronous the CQT
-    tempo, beats = librosa.beat.beat_track(y=y, sr=sr, trim=False)
-    Csync = librosa.util.sync(C, beats, aggregate=np.median)
+    song.beat_track = beatTrack(y=y, sr=sr)
+    tempo, beats = tuple(song.beat_track)
 
-    song.bpm = tempo
+    Csync = librosa.util.sync(C, beats, aggregate=np.median)
 
     #####################################################################
     # Let's build a weighted recurrence matrix using beat-synchronous CQT
