@@ -1,18 +1,10 @@
 from __future__ import print_function
 import librosa
 import librosa.display
-import heapq
 
-def segment(song, duration, display):
-    song.segments = segmentation(song=song, display=display)
-
-    max_pair = (0, 0)
-    for k, dk in song.segments.items():
-        for pair in dk:
-            diff = pair[1] - pair[0]
-            max_diff = max_pair[1] - max_pair[0]
-            if (diff >= duration) & (diff > max_diff):
-                max_pair = pair
+def slicer(song, duration):
+    largest_seg = max(song.segments.items(), key=lambda x: sum([z[1]-z[0] for z in x[1] if z[1]-z[0] >= duration]))[1]
+    max_pair = tuple(max(largest_seg, key=lambda pair: pair[1]-pair[0]))
 
     return max_pair
 
@@ -125,17 +117,11 @@ def segmentation(song, display=False):
     seg_dict = dict()
     for seg, frame in pairs:
         seg_dict.setdefault(seg, []).append(frame)
-    seg_dict = dict(heapq.nlargest(2, seg_dict.items(), key=lambda x: len(x[1])))
 
     if display:
         import matplotlib.patches as patches
         plt.figure(figsize=(12, 4))
         colors = plt.get_cmap('Paired', k)
-
-        # beat_times = librosa.frames_to_time(librosa.util.fix_frames(beats,
-        #                                                         x_min=0,
-        #                                                         x_max=C.shape[1]),
-        #                                 sr=sr)
 
         bound_times = librosa.frames_to_time(bound_frames)
         freqs = librosa.cqt_frequencies(n_bins=C.shape[0],

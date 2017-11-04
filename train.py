@@ -6,7 +6,7 @@ import argparse
 from playsound import playsound
 from shutil import rmtree
 
-from self_similarity import segment
+from self_similarity import segmentation, slicer
 from song_classes import Song, Slice, beatTrack
 from features import Features
 from kernel_density import kde, kd_feature
@@ -17,7 +17,8 @@ display_ = False
 preview_ = False
 verbose_ = True
 
-temp_dir = '_temp'
+supported_ext = ['.mp3', '.wav']
+temp_dir = 'audio/_temp'
 
 def main():
     '''
@@ -60,12 +61,13 @@ def main():
     train(args.genre, args.dir)
     return
 
-def train(genre, dir, n_beats=8):
+def train(genre, dir, n_beats=16):
     mp3s = []
     target = os.path.abspath(dir)
     for root, subs, files in os.walk(target):
         for f in files:
-            if os.path.splitext(f)[1] == '.mp3':
+            ext = os.path.splitext(f)[1]
+            if ext in supported_ext:
                 strip = os.path.splitext(f)[0]
                 mp3s.append((strip, os.path.join(target, f)))
     print('Loaded {} songs'.format(len(mp3s)))
@@ -74,8 +76,12 @@ def train(genre, dir, n_beats=8):
     update = update_info(len(mp3s))
     fail_count = 0
     for m in mp3s:
-        song = analyze_song(m, genre, n_beats, update)
-        songs.append(song)
+        try:
+            song = analyze_song(m, genre, n_beats, update)
+            songs.append(song)
+        except IndexError:
+            verbose_ and update.state('Failed!', end='\n')
+            fail_count += 1
 
     stdout.write('\x1b[2K')
     print('Analyzed {} songs. Failed {} songs.'.format(len(songs) - fail_count, fail_count))
@@ -89,31 +95,26 @@ def train(genre, dir, n_beats=8):
     return
 
 def analyze_song(mp3, genre, n_beats, update):
-    update.next(mp3[0], (verbose_ and 'Loading'))
+    update.next(mp3[0], status=(verbose_ and 'Loading'))
     song = Song(name=mp3[0], path=mp3[1])
     song.genre = genre
 
-    verbose_ and update.state('Chunking')
+    verbose_ and update.state(status='Chunking')
     song.beat_track = beatTrack(y=song.load.y, sr=song.load.sr)
 
     # first send the batch to the trainer function to analyze song for it's major segments
-    verbose_ and update.state('Segmenting')
+    verbose_ and update.state(status='Segmenting', info=('bpm', int(song.beat_track.tempo)))
     duration = (60 / song.beat_track.tempo) * n_beats  # beats per second
-    max_pair = segment(song, duration, display=display_)
+    song.segments = segmentation(song=song)
 
     # then take a N beat slice from the spectrogram that is from the most major segment
-    verbose_ and update.state('Slicing')
+    verbose_ and update.state(status='Slicing')
+    max_pair = slicer(song, duration)
     song.slice = Slice(song.path, offset=max_pair[0], duration=duration)
-    if preview_:
-        clear_folder(temp_dir)
-        path = os.path.join(os.getcwd(), temp_dir)
-        filename = song.name+'.wav'
-        song.slice.output_wav(path, filename)
-        full_path = os.path.join(path, filename)
-        playsound("{}".format(full_path))
+    preview_ and preview_slice(song)
 
     # gather the features from the slice
-    verbose_ and update.state('Scanning')
+    verbose_ and update.state(status='Scanning')
     song.slice.features = Features(song.slice)
     return song
 
@@ -143,18 +144,31 @@ class update_info(object):
     def __next__(self):
         return self.next()
 
-    def next(self, name, status=''):
+    def next(self, title, status='', info=''):
         if self.n < self.steps:
             self.n += 1
-            self.name = name
-            self.state(status)
+            self.title = title
+            self.state(status, info)
         else:
             raise StopIteration()
 
-    def state(self, status):
+    def state(self, status='', info='', end='\r'):
         stdout.write('\x1b[2K')
+        short_name = (self.title[:35] + ' ... ' + self.title[-5:]) if len(self.title) > 40 else self.title
         s = '| Status: {}'.format(status) if status else ''  # fight me
-        stdout.write('[{}/{}] {} {}\r'.format(self.n, self.steps, self.name, s))
+        i = '| {}: {}'.format(*info) if info else ''
+        stdout.write('[{}/{}] {} {} {}{}'.format(self.n, self.steps, short_name, s, i, end))
+
+def preview_slice(song):
+    try:
+        clear_folder(temp_dir)
+        path = temp_dir
+        filename = (song.name + '.wav').replace(' ', '-')
+        song.slice.output_wav(path, filename)
+        full_path = os.path.join(path, filename)
+        playsound("{}".format(full_path), block=False)
+    except OSError:
+        return
 
 def clear_folder(d):
     list(map(os.unlink, (os.path.join(d, f) for f in os.listdir(d))))
