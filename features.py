@@ -21,7 +21,6 @@ class Features:
         # y = effects.percussive(y)
         S = feature.melspectrogram(y, sr=sr, n_mels=mels)
         log_S = logamplitude(S, ref_power=np.max)
-        display_spec(log_S, sr)
 
         detector = CENSURE()
         detector.detect(log_S)
