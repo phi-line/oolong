@@ -1,85 +1,39 @@
 from __future__ import print_function
 import librosa
 import librosa.display
-import os
+import heapq
 
-song_folder = os.path.join(os.getcwd(), 'audio/')
-song_path = os.path.join(song_folder, 'smbu.mp3')
+def segment(song, duration, display):
+    song.segments = segmentation(song=song, display=display)
 
-def main():
-    # matrix()
-    # mfcc()
-    segmentation()
+    max_pair = (0, 0)
+    for k, dk in song.segments.items():
+        for pair in dk:
+            diff = pair[1] - pair[0]
+            max_diff = max_pair[1] - max_pair[0]
+            if (diff >= duration) & (diff > max_diff):
+                max_pair = pair
 
-def matrix():
-    y, sr = librosa.load(path=song_path)
-    mfcc = librosa.feature.mfcc(y=y, sr=sr)
-    R_aff = librosa.segment.recurrence_matrix(mfcc, metric='cosine')
+    return max_pair
 
-    print('it took this much time')
-    import matplotlib.pyplot as plt
-    librosa.display.specshow(R_aff, x_axis='time', y_axis='time')
-    plt.title('Affinity recurrence')
-    plt.tight_layout()
-    plt.show()
-
-def mfcc():
-    # Compute MFCC deltas, delta-deltas
-
-    y, sr = librosa.load(path=song_path)
-    mfcc = librosa.feature.mfcc(y=y, sr=sr)
-    mfcc_delta = librosa.feature.delta(mfcc)
-
-    import matplotlib.pyplot as plt
-    librosa.display.specshow(mfcc_delta, x_axis='time')
-    plt.title(r'MFCC-$\Delta$')
-    plt.colorbar()
-    plt.tight_layout()
-    plt.show()
-
-def segmentation():
-    # -*- coding: utf-8 -*-
-    """
-    ======================
-    Laplacian segmentation
-    ======================
-
-    This notebook implements the laplacian segmentation method of
-    `McFee and Ellis, 2014 <http://bmcfee.github.io/papers/ismir2014_spectral.pdf>`_,
-    with a couple of minor stability improvements.
-
-    Throughout the example, we will refer to equations in the paper by number, so it will be
-    helpful to read along.
-    """
-
+def segmentation(song, display=False):
+    '''
+    This function takes in a song and then returns a class containing the spectrogram, bpm, and major segements
+    :param path: the specific file path to read from
+    :param display: optional param to display segemented graph
+    :return:
+    '''
     # Code source: Brian McFee
     # License: ISC
-
-
-    ###################################
-    # Imports
-    #   - numpy for basic functionality
-    #   - scipy for graph Laplacian
-    #   - matplotlib for visualization
-    #   - sklearn.cluster for K-Means
-    #
-
-
     import numpy as np
     import scipy
     import matplotlib.pyplot as plt
-
     import sklearn.cluster
 
-    import librosa
-    import librosa.display
+    y = song.load.y
+    sr = song.load.sr
+    beat_track = song.beat_track
 
-    #############################
-    # First, we'll load in a song
-    y, sr = librosa.load(path=song_path)
-
-    ##############################################
-    # Next, we'll compute and plot a log-power CQT
     BINS_PER_OCTAVE = 12 * 3
     N_OCTAVES = 7
     C = librosa.amplitude_to_db(librosa.cqt(y=y, sr=sr,
@@ -87,35 +41,15 @@ def segmentation():
                                             n_bins=N_OCTAVES * BINS_PER_OCTAVE),
                                 ref=np.max)
 
-    plt.figure(figsize=(12, 4))
-    librosa.display.specshow(C, y_axis='cqt_hz', sr=sr,
-                             bins_per_octave=BINS_PER_OCTAVE,
-                             x_axis='time')
-    plt.tight_layout()
-
-    ##########################################################
     # To reduce dimensionality, we'll beat-synchronous the CQT
-    tempo, beats = librosa.beat.beat_track(y=y, sr=sr, trim=False)
+    tempo, beats = tuple(beat_track)
+
     Csync = librosa.util.sync(C, beats, aggregate=np.median)
-
-    # For plotting purposes, we'll need the timing of the beats
-    # we fix_frames to include non-beat frames 0 and C.shape[1] (final frame)
-    beat_times = librosa.frames_to_time(librosa.util.fix_frames(beats,
-                                                                x_min=0,
-                                                                x_max=C.shape[1]),
-                                        sr=sr)
-
-    plt.figure(figsize=(12, 4))
-    librosa.display.specshow(Csync, bins_per_octave=12 * 3,
-                             y_axis='cqt_hz', x_axis='time',
-                             x_coords=beat_times)
-    plt.tight_layout()
 
     #####################################################################
     # Let's build a weighted recurrence matrix using beat-synchronous CQT
-    # (Equation 1)
     # width=3 prevents links within the same bar
-    # mode='affinity' here implements S_rep (after Eq. 8)
+    # mode='affinity' here implements S_rep
     R = librosa.segment.recurrence_matrix(Csync, width=3, mode='affinity',
                                           sym=True)
 
@@ -125,11 +59,7 @@ def segmentation():
 
     ###################################################################
     # Now let's build the sequence matrix (S_loc) using mfcc-similarity
-    #
-    #   :math:`R_\text{path}[i, i\pm 1] = \exp(-\|C_i - C_{i\pm 1}\|^2 / \sigma^2)`
-    #
-    # Here, we take :math:`\sigma` to be the median distance between successive beats.
-    #
+
     mfcc = librosa.feature.mfcc(y=y, sr=sr)
     Msync = librosa.util.sync(mfcc, beats)
 
@@ -140,7 +70,7 @@ def segmentation():
     R_path = np.diag(path_sim, k=1) + np.diag(path_sim, k=-1)
 
     ##########################################################
-    # And compute the balanced combination (Equations 6, 7, 9)
+    # And compute the balanced combination
 
     deg_path = np.sum(R_path, axis=1)
     deg_rec = np.sum(Rf, axis=1)
@@ -150,7 +80,7 @@ def segmentation():
     A = mu * Rf + (1 - mu) * R_path
 
     #####################################################
-    # Now let's compute the normalized Laplacian (Eq. 10)
+    # Now let's compute the normalized Laplacian
     L = scipy.sparse.csgraph.laplacian(A, normed=True)
 
     # and its spectral decomposition
@@ -164,98 +94,67 @@ def segmentation():
     Cnorm = np.cumsum(evecs ** 2, axis=1) ** 0.5
 
     # If we want k clusters, use the first k normalized eigenvectors.
-    # Fun exercise: see how the segmentation changes as you vary k
-
     k = 5
 
     X = evecs[:, :k] / Cnorm[:, k - 1:k]
 
-    # Plot the resulting representation (Figure 1, center and right)
-
-    plt.figure(figsize=(8, 4))
-    plt.subplot(1, 2, 2)
-    librosa.display.specshow(Rf, cmap='inferno_r')
-    plt.title('Recurrence matrix')
-
-    plt.subplot(1, 2, 1)
-    librosa.display.specshow(X,
-                             y_axis='time',
-                             y_coords=beat_times)
-    plt.title('Structure components')
-    plt.tight_layout()
-
     #############################################################
     # Let's use these k components to cluster beats into segments
-    # (Algorithm 1)
     KM = sklearn.cluster.KMeans(n_clusters=k)
 
     seg_ids = KM.fit_predict(X)
 
-    # and plot the results
-    plt.figure(figsize=(12, 4))
-    colors = plt.get_cmap('Paired', k)
-
-    plt.subplot(1, 3, 2)
-    librosa.display.specshow(Rf, cmap='inferno_r')
-    plt.title('Recurrence matrix')
-    plt.subplot(1, 3, 1)
-    librosa.display.specshow(X,
-                             y_axis='time',
-                             y_coords=beat_times)
-    plt.title('Structure components')
-    plt.subplot(1, 3, 3)
-    librosa.display.specshow(np.atleast_2d(seg_ids).T, cmap=colors)
-    plt.title('Estimated segments')
-    plt.colorbar(ticks=range(k))
-    plt.tight_layout()
-
-    ###############################################################
-    # Locate segment boundaries from the label sequence
     bound_beats = 1 + np.flatnonzero(seg_ids[:-1] != seg_ids[1:])
 
-    # Count beat 0 as a boundary
     bound_beats = librosa.util.fix_frames(bound_beats, x_min=0)
 
-    # Compute the segment label for each boundary
     bound_segs = list(seg_ids[bound_beats])
 
-    # Convert beat indices to frames
     bound_frames = beats[bound_beats]
 
-    # Make sure we cover to the end of the track
     bound_frames = librosa.util.fix_frames(bound_frames,
                                            x_min=None,
                                            x_max=C.shape[1] - 1)
 
-    ###################################################
-    # And plot the final segmentation over original CQT
+    bound_tuples = []
+    for i in range(1, len(bound_frames)):
+        bound_tuples.append((bound_frames[i-1], bound_frames[i]-1))
+    bound_tuples = tuple(map(lambda x:librosa.frames_to_time(x),bound_tuples))
 
+    pairs = zip(bound_segs, bound_tuples)
+    seg_dict = dict()
+    for seg, frame in pairs:
+        seg_dict.setdefault(seg, []).append(frame)
+    seg_dict = dict(heapq.nlargest(2, seg_dict.items(), key=lambda x: len(x[1])))
 
-    # sphinx_gallery_thumbnail_number = 5
+    if display:
+        import matplotlib.patches as patches
+        plt.figure(figsize=(12, 4))
+        colors = plt.get_cmap('Paired', k)
 
-    import matplotlib.patches as patches
-    plt.figure(figsize=(12, 4))
+        # beat_times = librosa.frames_to_time(librosa.util.fix_frames(beats,
+        #                                                         x_min=0,
+        #                                                         x_max=C.shape[1]),
+        #                                 sr=sr)
 
-    bound_times = librosa.frames_to_time(bound_frames)
-    freqs = librosa.cqt_frequencies(n_bins=C.shape[0],
-                                    fmin=librosa.note_to_hz('C1'),
-                                    bins_per_octave=BINS_PER_OCTAVE)
+        bound_times = librosa.frames_to_time(bound_frames)
+        freqs = librosa.cqt_frequencies(n_bins=C.shape[0],
+                                        fmin=librosa.note_to_hz('C1'),
+                                        bins_per_octave=BINS_PER_OCTAVE)
 
-    librosa.display.specshow(C, y_axis='cqt_hz', sr=sr,
-                             bins_per_octave=BINS_PER_OCTAVE,
-                             x_axis='time')
-    ax = plt.gca()
+        librosa.display.specshow(C, y_axis='cqt_hz', sr=sr,
+                                 bins_per_octave=BINS_PER_OCTAVE,
+                                 x_axis='time')
+        ax = plt.gca()
 
-    for interval, label in zip(zip(bound_times, bound_times[1:]), bound_segs):
-        ax.add_patch(patches.Rectangle((interval[0], freqs[0]),
-                                       interval[1] - interval[0],
-                                       freqs[-1],
-                                       facecolor=colors(label),
-                                       alpha=0.50))
+        for interval, label in zip(zip(bound_times, bound_times[1:]), bound_segs):
+            ax.add_patch(patches.Rectangle((interval[0], freqs[0]),
+                                           interval[1] - interval[0],
+                                           freqs[-1],
+                                           facecolor=colors(label),
+                                           alpha=0.50))
 
-    plt.tight_layout()
-    plt.show()
+        plt.tight_layout()
+        plt.show()
 
-
-if __name__ == '__main__':
-    main()
+    return seg_dict
