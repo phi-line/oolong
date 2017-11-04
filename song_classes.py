@@ -11,7 +11,7 @@ class Song:
         self.load = Load(path)
         self.genre = None
         self.beat_track = None
-        self.segments = []
+        self.segments = None
         self.slice = None
 
 class Load:
