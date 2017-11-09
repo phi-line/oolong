@@ -68,9 +68,9 @@ def train(genre, dir, n_beats=16):
     It calls analyze upon to fill the song class structure with attributes.
     Upon storing all song data, it will calculate a Kernel Density Estimator for the combined scatterplots.
 
-    :param genre: (string) input genre to store alongside the song
-    :param dir: (string) directory of the song folder
-    :param n_beats: (int) number of beats to record for the slice
+    :param genre: (string) | input genre to store alongside the song
+    :param dir: (string)   | directory of the song folder
+    :param n_beats: (int)  | number of beats to record for the slice
     :return: None
     '''
     mp3s = []
@@ -112,11 +112,11 @@ def analyze_song(mp3, genre, n_beats, update):
     Using the most prominent slice it will record a fixed n_beats portion of the song, using the bpm as a calculation
     for duration. Upon getting the slice it will gather it's features using CENSURE image recognition.
 
-    :param mp3: (string) the path to the song
-    :param genre: (string) the genre to store with the song
-    :param n_beats: (int) the n beat portion to record for the slice
-    :param update: (update_info) class hook to display the status of the function
-    :return: song: (Song) The filled song class returned to the driver
+    :param mp3: (string)         | path to the song
+    :param genre: (string)       | genre to store with the song
+    :param n_beats: (int)        | n beat portion to record for the slice
+    :param update: (update_info) | class hook to display the status of the function
+    :return: song: (Song)        | filled song class returned to the driver
     '''
     update.next(mp3[0], status=(verbose_ and 'Loading'))
     song = Song(name=mp3[0], path=mp3[1])
@@ -166,7 +166,7 @@ class update_info(object):
         Next calls state() to display this info to the user but this function can also be called
         public to update the Status or info without the increment.
 
-        :param steps: The total number of steps to increment to
+        :param steps: total number of steps to increment to
         '''
         self.steps = steps
         self.n = 0
@@ -182,8 +182,8 @@ class update_info(object):
         Generator function that increments the n/total info
         Takes in a new title for the song and an optional status and info
 
-        :param title: (string) the title of the song
-        :param status: (string) The current stage of the song's loading process
+        :param title: (string) name of the song
+        :param status: (string) current stage of the song's loading process
         :param info: (tuple) Additional information to be displayed to the user.
         :return: None
         '''
@@ -201,7 +201,7 @@ class update_info(object):
         It updates its info in line as to not take up much terminal space.
         This inline behaviour can be modified with the end character
 
-        :param status: (string) The current stage of the song's loading process
+        :param status: (string) current stage of the song's loading process
         :param info: (tuple) Additional information to be displayed to the user.
         :param end: The end character
         :return: None
