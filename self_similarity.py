@@ -3,16 +3,6 @@ import librosa
 import librosa.display
 
 def slicer(song, duration):
-    '''
-    Takes in a song and its segments and computes the largest total segment in the dictionary.
-    To do this it sums up each of the dictionary entries using that disgusting(tm) comprehension below.
-    The segment has to be larger than the given duration in order to be considered in the sum.
-    It then takes the max dictionary entry and returns the segment with the bounds.
-
-    :param song: (Song)       | song to slice
-    :param duration: (float)  | duration to 'record' (in seconds)
-    :return: max_pair (tuple) | the segment with the maximum bounds
-    '''
     largest_seg = max(song.segments.items(), key=lambda x: sum([z[1]-z[0] for z in x[1] if z[1]-z[0] >= duration]))[1]
     max_pair = tuple(max(largest_seg, key=lambda pair: pair[1]-pair[0]))
 
@@ -20,14 +10,13 @@ def slicer(song, duration):
 
 def segmentation(song, display=False):
     '''
-    Takes in a song and then returns a class containing the spectrogram, bpm, and major segments
-    It also fills the song's beatTrack and uses it in the segmentation algorithm.
-    Algorithm written by: Brian McFee https://bmcfee.github.io/
-
-    :param song: (Song)      | song to segment
-    :param display: (bool)   | optional argument to display graph of segments using matPlotLib
-    :return: seg_dict (dict) | dictionary of segments
+    This function takes in a song and then returns a class containing the spectrogram, bpm, and major segements
+    :param path: the specific file path to read from
+    :param display: optional param to display segemented graph
+    :return:
     '''
+    # Code source: Brian McFee
+    # License: ISC
     import numpy as np
     import scipy
     import matplotlib.pyplot as plt
