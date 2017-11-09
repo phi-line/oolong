@@ -2,6 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def kde(features, bandwidth=4.0):
+    '''
+    Takes in a Feature class and plots a kernel density estimator from it's scatterplot
+
+    :param features: (numpy.ndarray) | feature scatterplot
+    :param bandwidth: (float)        | 'resolution' for the KDE. gaussian type blurring
+    :return: None
+    '''
     kp = features.kp
     detector = features.detector
 
@@ -13,7 +20,13 @@ def kde(features, bandwidth=4.0):
     plt.show()
 
 def kd_feature(scatter, bandwidth, xbins=100j, ybins=100j, **kwargs):
-    """Build 2D kernel density estimate (KDE)."""
+    '''
+    Helper function that computes a KDE for a given scatterplot
+
+    :param scatter: (numpy.ndarray)  | feature scatterplot
+    :param bandwidth: (float)        | 'resolution' for the KDE. gaussian type blurring
+    :return: xx, yy, shape
+    '''
     from sklearn.neighbors import KernelDensity
 
     x = scatter[:, 1]; y = scatter[:, 0]

@@ -62,6 +62,17 @@ def main():
     return
 
 def train(genre, dir, n_beats=16):
+    '''
+    This is the main driver for now.
+    This function takes a directory and scans it for all of its songs.
+    It calls analyze upon to fill the song class structure with attributes.
+    Upon storing all song data, it will calculate a Kernel Density Estimator for the combined scatterplots.
+
+    :param genre: (string) | input genre to store alongside the song
+    :param dir: (string)   | directory of the song folder
+    :param n_beats: (int)  | number of beats to record for the slice
+    :return: None
+    '''
     mp3s = []
     target = os.path.abspath(dir)
     for root, subs, files in os.walk(target):
@@ -95,6 +106,18 @@ def train(genre, dir, n_beats=16):
     return
 
 def analyze_song(mp3, genre, n_beats, update):
+    '''
+    This function takes a song and fills all of the nested class components found in song_classes.py
+    It first takes song and loads it using Librosa. Then it segments the song, splitting it up into its major portions.
+    Using the most prominent slice it will record a fixed n_beats portion of the song, using the bpm as a calculation
+    for duration. Upon getting the slice it will gather it's features using CENSURE image recognition.
+
+    :param mp3: (string)         | path to the song
+    :param genre: (string)       | genre to store with the song
+    :param n_beats: (int)        | n beat portion to record for the slice
+    :param update: (update_info) | class hook to display the status of the function
+    :return: song: (Song)        | filled song class returned to the driver
+    '''
     update.next(mp3[0], status=(verbose_ and 'Loading'))
     song = Song(name=mp3[0], path=mp3[1])
     song.genre = genre
@@ -135,6 +158,16 @@ class readable_dir(argparse.Action):
 from sys import stdout
 class update_info(object):
     def __init__(self, steps):
+        '''
+        This is a helper class to provide a visual aid to the analyzing process.
+        It takes in a total number of steps as an input and acts as a generator:
+            '[n/100] songName | Status: Segmenting | BPM: 220'
+        Everytime next is called, the step count will increase
+        Next calls state() to display this info to the user but this function can also be called
+        public to update the Status or info without the increment.
+
+        :param steps: total number of steps to increment to
+        '''
         self.steps = steps
         self.n = 0
 
@@ -145,6 +178,15 @@ class update_info(object):
         return self.next()
 
     def next(self, title, status='', info=''):
+        '''
+        Generator function that increments the n/total info
+        Takes in a new title for the song and an optional status and info
+
+        :param title: (string) name of the song
+        :param status: (string) current stage of the song's loading process
+        :param info: (tuple) Additional information to be displayed to the user.
+        :return: None
+        '''
         if self.n < self.steps:
             self.n += 1
             self.title = title
@@ -153,6 +195,17 @@ class update_info(object):
             raise StopIteration()
 
     def state(self, status='', info='', end='\r'):
+        '''
+        State displays information about the song's process to the user.
+        Info and status are both optional as with next()
+        It updates its info in line as to not take up much terminal space.
+        This inline behaviour can be modified with the end character
+
+        :param status: (string) current stage of the song's loading process
+        :param info: (tuple) Additional information to be displayed to the user.
+        :param end: The end character
+        :return: None
+        '''
         stdout.write('\x1b[2K')
         short_name = (self.title[:35] + ' ... ' + self.title[-5:]) if len(self.title) > 40 else self.title
         s = '| Status: {}'.format(status) if status else ''  # fight me
@@ -160,6 +213,12 @@ class update_info(object):
         stdout.write('[{}/{}] {} {} {}{}'.format(self.n, self.steps, short_name, s, i, end))
 
 def preview_slice(song):
+    '''
+    This function outputs a song to a _temp directory in wav format and plays it.
+
+    :param song: (string) The filepath of the song
+    :return: None
+    '''
     try:
         clear_folder(temp_dir)
         path = temp_dir
@@ -171,6 +230,12 @@ def preview_slice(song):
         return
 
 def clear_folder(d):
+    '''
+    This is a helper function to preview_slice to clear the _temp folder before storage.
+
+    :param d: (string) directory to clear
+    :return: None
+    '''
     list(map(os.unlink, (os.path.join(d, f) for f in os.listdir(d))))
 
 if __name__ == '__main__':
