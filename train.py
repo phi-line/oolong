@@ -3,8 +3,10 @@ from __future__ import print_function
 import os
 import argparse
 
+from tinydb import TinyDB, Query
+import json
+
 from playsound import playsound
-from shutil import rmtree
 
 from self_similarity import segmentation, slicer
 from song_classes import Song, Slice, beatTrack
@@ -89,7 +91,7 @@ def train(genre, dir, n_beats=16):
     for m in mp3s:
         try:
             song = analyze_song(m, genre, n_beats, update)
-            songs.append(song)
+            print(json.dumps(song.toJSON(), cls=ComplexEncoder))
         except IndexError:
             verbose_ and update.state('Failed!', end='\n')
             fail_count += 1
@@ -126,7 +128,7 @@ def analyze_song(mp3, genre, n_beats, update):
     song.beat_track = beatTrack(y=song.load.y, sr=song.load.sr)
 
     # first send the batch to the trainer function to analyze song for it's major segments
-    verbose_ and update.state(status='Segmenting', info=('bpm', int(song.beat_track.tempo)))
+    verbose_ and update.state(status='Segmenting')
     duration = (60 / song.beat_track.tempo) * n_beats  # beats per second
     song.segments = segmentation(song=song)
 
@@ -154,6 +156,13 @@ class readable_dir(argparse.Action):
             setattr(namespace,self.dest,prospective_dir)
         else:
             raise argparse.ArgumentTypeError("readable_dir:{0} is not a readable dir".format(prospective_dir))
+
+class ComplexEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj,'toJSON'):
+            return obj.toJSON()
+        else:
+            return json.JSONEncoder.default(self, obj)
 
 from sys import stdout
 class update_info(object):

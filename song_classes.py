@@ -27,6 +27,11 @@ class Song:
         self.segments = None
         self.slice = None
 
+    def toJSON(self):
+        return dict(name=self.name, path=self.path,
+                    load=self.load, genre=self.genre, beat_track=self.beat_track,
+                    segments=self.segments, slice=self.slice)
+
 class Load:
     def __init__(self, path, **kwargs):
         '''
@@ -43,6 +48,9 @@ class Load:
 
     def __iter__(self):
         return iter([self.y, self.sr])
+
+    def toJSON(self):
+        return dict(y=self.y, sr=self.sr)
 
     def output_wav(self, folder, filename):
         '''
@@ -70,6 +78,10 @@ class Slice(Load):
         self.duration = duration
         self.features = None
 
+    def toJSON(self):
+        return dict(y=self.y, sr=self.sr,
+                    offset=self.offset, duration=self.duration, features=self.features)
+
 class beatTrack():
     def __init__(self, y, sr):
         '''
@@ -84,6 +96,9 @@ class beatTrack():
 
     def __iter__(self):
         return iter([self.tempo, self.beats])
+
+    def toJSON(self):
+        return dict(tempo=self.tempo, beats=self.beats)
 
 def load_song(path, **kwargs):
     '''
