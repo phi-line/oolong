@@ -9,6 +9,8 @@ import librosa.display
 from librosa import effects, feature, logamplitude
 from skimage.feature import CENSURE
 
+from json_tricks.np import dump, dumps, load, loads, strip_comments
+
 class Features:
     def __init__(self, slice):
         '''
@@ -22,6 +24,13 @@ class Features:
         detector, kp = self.getFeatures(slice)
         self.detector = detector
         self.kp = kp
+
+    def __json_encode__(self):
+        return {'kp': self.kp}
+
+    def __json_decode__(self, **attrs):
+        self.detector = CENSURE()
+        self.kp = attrs['kp']
 
     @staticmethod
     def getFeatures(slice, mels=256):
@@ -43,9 +52,6 @@ class Features:
         detector.detect(log_S)
         kp = detector.keypoints
         return detector, kp
-
-    def toJSON(self):
-        return dict(kp=self.kp)
 
 def display_spec(S, sr):
     '''

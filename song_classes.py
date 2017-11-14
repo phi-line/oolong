@@ -1,4 +1,5 @@
 import numpy as np
+from json_tricks.np import dump, dumps, load, loads, strip_comments
 
 # Loading songs from a path
 import os
@@ -27,10 +28,18 @@ class Song:
         self.segments = None
         self.slice = None
 
-    def toJSON(self):
-        return dict(name=self.name, path=self.path,
-                    load=self.load.toJSON(), genre=self.genre, beat_track=self.beat_track.toJSON(),
-                    segments=self.segments, slice=self.slice.toJSON())
+    def __json_encode__(self):
+        return {'name': self.name, 'path': self.path, 'segments': self.segments,
+                'slice': dumps(self.slice), 'beat_track': dumps(self.beat_track)}
+
+    def __json_decode__(self, **attrs):
+        self.name = attrs['name']
+        self.path = attrs['path']
+        self.load = Load(attrs['path'])
+        self.genre = attrs['genre']
+        self.segments = attrs['segments']
+        self.slice = loads(attrs['slice'])
+        self.beat_track = loads(attrs['slice'])
 
 class Load:
     def __init__(self, path, **kwargs):
@@ -48,9 +57,6 @@ class Load:
 
     def __iter__(self):
         return iter([self.y, self.sr])
-
-    def toJSON(self):
-        return dict(y=self.y, sr=self.sr)
 
     def output_wav(self, folder, filename):
         '''
@@ -78,17 +84,24 @@ class Slice(Load):
         self.duration = duration
         self.features = None
 
-    def toJSON(self):
-        return dict(y=self.y, sr=self.sr,
-                    offset=self.offset, duration=self.duration, features=self.features.toJSON())
+    def __json_encode__(self):
+        return {'y': self.y, 'sr': self.sr,
+                'offset': self.offset, 'duration': self.duration, 'features': dumps(self.features)}
+
+    def __json_decode__(self, **attrs):
+        self.y = attrs['y']
+        self.sr = attrs['sr']
+        self.offset = attrs['offset']
+        self.duration = attrs['duration']
+        self.features = loads(attrs['features'])
 
 class beatTrack():
     def __init__(self, y, sr):
         '''
         Generates a Librosa beat.beat_track() for the song.
 
-        :param y: (numpy.ndarray) | audio time series
-        :param sr: (int)          | sample rate
+        :param tempo: (float) | beats per minute
+        :param beats: (list)  | list of beat frames
         '''
         tempo, beats = beat.beat_track(y=y, sr=sr, trim=False)
         self.tempo = tempo
@@ -97,8 +110,12 @@ class beatTrack():
     def __iter__(self):
         return iter([self.tempo, self.beats])
 
-    def toJSON(self):
-        return dict(tempo=self.tempo, beats=self.beats)
+    def __json_encode__(self):
+        return {'tempo': self.tempo, 'beats': self.beats}
+
+    def __json_decode__(self, **attrs):
+        self.tempo = attrs['tempo']
+        self.beats = attrs['beats']
 
 def load_song(path, **kwargs):
     '''

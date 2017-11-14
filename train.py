@@ -4,8 +4,8 @@ import os
 import argparse
 
 from tinydb import TinyDB, Query
-import json
-import numpy as np
+from datetime import datetime
+import json_tricks.np as jt
 
 from playsound import playsound
 
@@ -77,6 +77,7 @@ def train(genre, dir, n_beats=16):
     :return: None
     '''
     mp3s = []
+    db = TinyDB(os.path.join('audio', ''.join(genre + '-' + str(datetime.now())) + '.json'))
     target = os.path.abspath(dir)
     for root, subs, files in os.walk(target):
         for f in files:
@@ -92,7 +93,8 @@ def train(genre, dir, n_beats=16):
     for m in mp3s:
         try:
             song = analyze_song(m, genre, n_beats, update)
-            print(song.toJSON())
+            json = jt.dumps(song)
+            db.insert(json)
         except IndexError:
             verbose_ and update.state('Failed!', end='\n')
             fail_count += 1
