@@ -29,8 +29,8 @@ class Song:
 
     def toJSON(self):
         return dict(name=self.name, path=self.path,
-                    load=self.load, genre=self.genre, beat_track=self.beat_track,
-                    segments=self.segments, slice=self.slice)
+                    load=self.load.toJSON(), genre=self.genre, beat_track=self.beat_track.toJSON(),
+                    segments=self.segments, slice=self.slice.toJSON())
 
 class Load:
     def __init__(self, path, **kwargs):
@@ -80,7 +80,7 @@ class Slice(Load):
 
     def toJSON(self):
         return dict(y=self.y, sr=self.sr,
-                    offset=self.offset, duration=self.duration, features=self.features)
+                    offset=self.offset, duration=self.duration, features=self.features.toJSON())
 
 class beatTrack():
     def __init__(self, y, sr):

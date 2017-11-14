@@ -44,6 +44,9 @@ class Features:
         kp = detector.keypoints
         return detector, kp
 
+    def toJSON(self):
+        return dict(kp=self.kp)
+
 def display_spec(S, sr):
     '''
     Displays a spectrogram back to the user

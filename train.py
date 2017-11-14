@@ -5,6 +5,7 @@ import argparse
 
 from tinydb import TinyDB, Query
 import json
+import numpy as np
 
 from playsound import playsound
 
@@ -91,7 +92,7 @@ def train(genre, dir, n_beats=16):
     for m in mp3s:
         try:
             song = analyze_song(m, genre, n_beats, update)
-            print(json.dumps(song.toJSON(), cls=ComplexEncoder))
+            print(song.toJSON())
         except IndexError:
             verbose_ and update.state('Failed!', end='\n')
             fail_count += 1
@@ -156,13 +157,6 @@ class readable_dir(argparse.Action):
             setattr(namespace,self.dest,prospective_dir)
         else:
             raise argparse.ArgumentTypeError("readable_dir:{0} is not a readable dir".format(prospective_dir))
-
-class ComplexEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if hasattr(obj,'toJSON'):
-            return obj.toJSON()
-        else:
-            return json.JSONEncoder.default(self, obj)
 
 from sys import stdout
 class update_info(object):
