@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import os
+import sys
 import argparse
 
 from tinydb import TinyDB, Query
@@ -16,7 +17,7 @@ from kernel_density import kde, kd_feature
 
 import matplotlib.pyplot as plt
 
-display_ = False
+train_ = False
 preview_ = False
 verbose_ = True
 
@@ -46,7 +47,7 @@ def main():
     parser.add_argument(dest="dir",
                         help="(path) from root to folder containing song files to analyze", metavar="[dir]",
                         action=readable_dir)
-    parser.add_argument("-d", "--display", help="display matplotlib graphs",
+    parser.add_argument("-t", "--train", help="load pre-analyzed songs from database",
                         action="store_true")
     parser.add_argument("-p", "--preview", help="play a preview of the slice while scanning",
                         action="store_true")
@@ -56,7 +57,7 @@ def main():
     if not args.genre and args.dir:
         return
 
-    global display_; display_ = args.display
+    global train_; train_ = args.train
     global preview_; preview_ = args.preview
     # global verbose_; verbose_ = args.verbose
 
@@ -64,12 +65,15 @@ def main():
 
     genre_db_dir = os.path.join(db_dir, args.genre)
     if not os.path.exists(genre_db_dir):
-        os.makedirs(genre_db_dir)
+        os.makedirs(genre_db_dir, exist_ok=True)
 
-    train(args.genre, args.dir)
+    if train_:
+        train(args.genre, args.dir)
+    else:
+        load(args.genre, args.dir)
     return
 
-def train(genre, load_dir, n_beats=16):
+def load(genre, load_dir, n_beats=16):
     '''
     This is the main driver for now.
     This function takes a directory and scans it for all of its songs.
@@ -94,7 +98,6 @@ def train(genre, load_dir, n_beats=16):
                 mp3s.append((strip, os.path.join(target, f)))
     print('Loaded {} songs'.format(len(mp3s)))
 
-    songs = []
     update = update_info(len(mp3s))
     succ_count = 0
     fail_count = 0
@@ -111,16 +114,23 @@ def train(genre, load_dir, n_beats=16):
     stdout.write('\x1b[2K')
     print('Analyzed {} songs. Failed {} songs.'.format(succ_count - fail_count, fail_count))
     clear_folder(temp_dir)
-
-    # for i, item in enumerate(db):
-    #     songs.append(jt.loads(item[str(i)]))
-
-    #return the feature scatterplot from the slice to the main script to be stored alongside each
-    # for song in songs:
-    #     verbose_ and update.state('Plotting')
-    #     kde(song.slice.features)
-
     return
+
+def train(genre, json):
+    db = TinyDB(json)
+
+    songs = []
+    l = len(db)
+    printProgressBar(0, l, prefix='Progress:', suffix='Complete', length=50)
+    for i, item in enumerate(db):
+        songs.append(jt.loads(item[str(i)]))
+        printProgressBar(i + 1, l, prefix='Progress:', suffix='Complete', length=50)
+
+    # return the feature scatterplot from the slice to the main script to be stored alongside each
+    for song in songs:
+        verbose_ and update.state('Plotting')
+
+    kde(song.slice.features)
 
 def analyze_song(mp3, genre, n_beats, update):
     '''
@@ -165,12 +175,13 @@ class readable_dir(argparse.Action):
     '''
     def __call__(self, parser, namespace, values, option_string=None):
         prospective_dir=values
-        if not os.path.isdir(prospective_dir):
-            raise argparse.ArgumentTypeError("readable_dir:{0} is not a valid path".format(prospective_dir))
+        override = (('-t' or '--train') in sys.argv)
+        if not os.path.isdir(prospective_dir) and not override:
+            raise argparse.ArgumentTypeError('readable_dir:{0} is not a valid path'.format(prospective_dir))
         if os.access(prospective_dir, os.R_OK):
             setattr(namespace,self.dest,prospective_dir)
         else:
-            raise argparse.ArgumentTypeError("readable_dir:{0} is not a readable dir".format(prospective_dir))
+            raise argparse.ArgumentTypeError('readable_dir:{0} is not a readable dir'.format(prospective_dir))
 
 from sys import stdout
 class update_info(object):
@@ -228,6 +239,28 @@ class update_info(object):
         s = '| Status: {}'.format(status) if status else ''  # fight me
         i = '| {}: {}'.format(*info) if info else ''
         stdout.write('[{}/{}] {} {} {}{}'.format(self.n, self.steps, short_name, s, i, end))
+
+def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
+    '''
+    Prints a progression bar
+    Stolen from: https://stackoverflow.com/a/34325723
+
+    :param iteration: (int) | current iteration
+    :param total: (int)     | total iterations (Int)
+    :param prefix: (string) | prefix string (Str)
+    :param suffix: (string) | suffix string (Str)
+    :param decimals: (int)  | positive number of decimals in percent complete (Int)
+    :param length: (int)    | character length of bar (Int)
+    :param fill: (string)   | bar fill character (Str)
+    :return: None
+    '''
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = '\r')
+    # Print New Line on Complete
+    if iteration == total:
+        print()
 
 def preview_slice(song):
     '''
