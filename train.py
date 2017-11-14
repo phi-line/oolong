@@ -17,7 +17,8 @@ from kernel_density import kde, kd_feature
 
 import matplotlib.pyplot as plt
 
-train_ = False
+load_dir_ = None
+db_dir_ = None
 preview_ = False
 verbose_ = True
 
@@ -44,33 +45,29 @@ def main():
                                      usage='%(prog)s house HousePlaylist/')
     parser.add_argument(dest="genre",
                         help="(string) classifier to train a model for")
-    parser.add_argument(dest="dir",
-                        help="(path) from root to folder containing song files to analyze", metavar="[dir]",
-                        action=readable_dir)
+    parser.add_argument("-l", "--load", help="(path) from root to folder containing song files to analyze",
+                        metavar="[load dir]", action=readable_dir, dest="load_dir")
     parser.add_argument("-t", "--train", help="load pre-analyzed songs from database",
-                        action="store_true")
+                        metavar="[train dir]", action=readable_file, dest="db_dir")
     parser.add_argument("-p", "--preview", help="play a preview of the slice while scanning",
                         action="store_true")
-    # parser.add_argument("-v", "--verbose", help="output individual steps to console",
-    #                     action="store_true")
     args = parser.parse_args()
-    if not args.genre and args.dir:
+    if not args.genre and (args.load or args.train):
         return
 
-    global train_; train_ = args.train
+    global load_dir_; load_dir_ = args.load_dir
+    global db_dir_; db_dir_ = args.db_dir
     global preview_; preview_ = args.preview
-    # global verbose_; verbose_ = args.verbose
 
-    preview_ and os.makedirs(temp_dir, exist_ok=True)
+    load_dir_ and preview_ and os.makedirs(temp_dir, exist_ok=True)
 
-    genre_db_dir = os.path.join(db_dir, args.genre)
-    if not os.path.exists(genre_db_dir):
-        os.makedirs(genre_db_dir, exist_ok=True)
+    if db_dir_:
+        genre_db_dir = os.path.join(db_dir, args.genre)
+        if not os.path.exists(genre_db_dir):
+            os.makedirs(genre_db_dir, exist_ok=True)
 
-    if train_:
-        train(args.genre, args.dir)
-    else:
-        load(args.genre, args.dir)
+    load_dir_ and load(args.genre, args.load_dir)
+    db_dir_ and train(args.genre, args.db_dir)
     return
 
 def load(genre, load_dir, n_beats=16):
@@ -129,7 +126,7 @@ def train(genre, json, n_beats=16):
 
     # return the feature scatterplot from the slice to the main script to be stored alongside each
     for feature in features:
-        print(feature.kp.shape)
+        # print(feature.kp.shape)
         kde(feature)
 
 def analyze_song(mp3, genre, n_beats, update):
@@ -175,13 +172,25 @@ class readable_dir(argparse.Action):
     '''
     def __call__(self, parser, namespace, values, option_string=None):
         prospective_dir=values
-        override = (('-t' or '--train') in sys.argv)
-        if not os.path.isdir(prospective_dir) and not override:
+        if not os.path.isdir(prospective_dir):
             raise argparse.ArgumentTypeError('readable_dir:{0} is not a valid path'.format(prospective_dir))
         if os.access(prospective_dir, os.R_OK):
             setattr(namespace,self.dest,prospective_dir)
         else:
             raise argparse.ArgumentTypeError('readable_dir:{0} is not a readable dir'.format(prospective_dir))
+
+class readable_file(argparse.Action):
+    '''
+    This class validates a given directory and raises an exception if the directory is invalid.
+    '''
+    def __call__(self, parser, namespace, values, option_string=None):
+        prospective_path=values
+        if not os.path.exists(prospective_path):
+            raise argparse.ArgumentTypeError('readable_dir:{0} is not a valid path'.format(prospective_path))
+        if os.access(prospective_path, os.R_OK):
+            setattr(namespace,self.dest,prospective_path)
+        else:
+            raise argparse.ArgumentTypeError('readable_dir:{0} is not a valid path'.format(prospective_path))
 
 from sys import stdout
 class update_info(object):

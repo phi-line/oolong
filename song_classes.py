@@ -37,17 +37,6 @@ class Song:
                 'beat_track': self.beat_track, 'features': self.features}
 
     def __json_decode__(self, **attrs):
-        # self.name = attrs['name']
-        # self.path = attrs['path']
-        # self.load = Load(attrs['path'])
-        # self.genre = attrs['genre']
-        # self.segments = attrs['segments']
-        # self.beat_track = attrs['beat_track']
-
-        # duration = (60 / self.beat_track.tempo) * 16  # beats per second
-        # max_pair = slicer(self, duration)
-        # self.slice = Slice(self.path, offset=max_pair[0], duration=duration)
-
         self.features = attrs['features']
 
 class Load:
