@@ -4,6 +4,8 @@ from json_tricks.np import load
 import os
 from librosa import load, beat, output
 
+from self_similarity import slicer
+
 class Song:
     def __init__(self, name, path):
         '''
@@ -18,6 +20,7 @@ class Song:
         :attr beat_track: (beatTrack) | beat track from Librosa's beat.beat_track()
         :attr segments: (dict)        | dictionary of the segments of a song and their bounds as tuples
         :attr slice: (Slice)          | variant of Load that takes a slice of a song at an offset and duration
+        :attr: features: (Features)   | class to store feature scatterplot
         '''
         self.name = name
         self.path = path
@@ -26,20 +29,26 @@ class Song:
         self.segments = None
         self.beat_track = None
         self.slice = None
+        self.features = None
 
     def __json_encode__(self):
         return {'name': self.name, 'path': self.path, 'genre': self.genre,
                 'segments': dict([(str(k), v) for k, v in self.segments.items()]),
-                'beat_track': self.beat_track, 'slice': self.slice}
+                'beat_track': self.beat_track, 'features': self.features}
 
     def __json_decode__(self, **attrs):
-        self.name = attrs['name']
-        self.path = attrs['path']
-        self.load = Load(attrs['path'])
-        self.genre = attrs['genre']
-        self.segments = attrs['segments']
-        self.beat_track = attrs['slice']
-        self.slice = attrs['slice']
+        # self.name = attrs['name']
+        # self.path = attrs['path']
+        # self.load = Load(attrs['path'])
+        # self.genre = attrs['genre']
+        # self.segments = attrs['segments']
+        # self.beat_track = attrs['beat_track']
+
+        # duration = (60 / self.beat_track.tempo) * 16  # beats per second
+        # max_pair = slicer(self, duration)
+        # self.slice = Slice(self.path, offset=max_pair[0], duration=duration)
+
+        self.features = attrs['features']
 
 class Load:
     def __init__(self, path, **kwargs):
@@ -77,12 +86,10 @@ class Slice(Load):
         :param path: (string)       | path to load
         :param offset: (float)      | offset to start load (in seconds)
         :param duration: (float)    | duration to 'record' (in seconds)
-        :attr: features: (Features) | class to store feature scatterplot
         '''
         super().__init__(path, offset=offset, duration=duration)
         self.offset = offset
         self.duration = duration
-        self.features = None
 
 class beatTrack():
     def __init__(self, y, sr):

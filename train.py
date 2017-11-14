@@ -116,21 +116,21 @@ def load(genre, load_dir, n_beats=16):
     clear_folder(temp_dir)
     return
 
-def train(genre, json):
+def train(genre, json, n_beats=16):
     db = TinyDB(json)
 
-    songs = []
+    features = []
     l = len(db)
     printProgressBar(0, l, prefix='Progress:', suffix='Complete', length=50)
     for i, item in enumerate(db):
-        songs.append(jt.loads(item[str(i)]))
+        song = jt.loads(item[str(i)])
+        features.append(song.features)
         printProgressBar(i + 1, l, prefix='Progress:', suffix='Complete', length=50)
 
     # return the feature scatterplot from the slice to the main script to be stored alongside each
-    for song in songs:
-        verbose_ and update.state('Plotting')
-
-    kde(song.slice.features)
+    for feature in features:
+        print(feature.kp.shape)
+        kde(feature)
 
 def analyze_song(mp3, genre, n_beats, update):
     '''
@@ -165,7 +165,7 @@ def analyze_song(mp3, genre, n_beats, update):
 
     # gather the features from the slice
     verbose_ and update.state(status='Scanning')
-    song.slice.features = Features(song.slice)
+    song.features = Features(song.slice)
     return song
 
 class readable_dir(argparse.Action):
@@ -240,7 +240,7 @@ class update_info(object):
         i = '| {}: {}'.format(*info) if info else ''
         stdout.write('[{}/{}] {} {} {}{}'.format(self.n, self.steps, short_name, s, i, end))
 
-def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
+def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 2, length = 100, fill = '█'):
     '''
     Prints a progression bar
     Stolen from: https://stackoverflow.com/a/34325723
