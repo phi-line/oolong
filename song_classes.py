@@ -1,5 +1,4 @@
-import numpy as np
-from json_tricks.np import dump, dumps, load, loads, strip_comments
+from json_tricks.np import load
 
 # Loading songs from a path
 import os
@@ -24,13 +23,14 @@ class Song:
         self.path = path
         self.load = Load(path)
         self.genre = None
-        self.beat_track = None
         self.segments = None
+        self.beat_track = None
         self.slice = None
 
     def __json_encode__(self):
-        return {'name': self.name, 'path': self.path, 'segments': self.segments,
-                'slice': dumps(self.slice), 'beat_track': dumps(self.beat_track)}
+        return {'name': self.name, 'path': self.path, 'genre': self.genre,
+                'segments': dict([(str(k), v) for k, v in self.segments.items()]),
+                'beat_track': self.beat_track, 'slice': self.slice}
 
     def __json_decode__(self, **attrs):
         self.name = attrs['name']
@@ -38,8 +38,8 @@ class Song:
         self.load = Load(attrs['path'])
         self.genre = attrs['genre']
         self.segments = attrs['segments']
-        self.slice = loads(attrs['slice'])
-        self.beat_track = loads(attrs['slice'])
+        self.beat_track = attrs['slice']
+        self.slice = attrs['slice']
 
 class Load:
     def __init__(self, path, **kwargs):
@@ -84,17 +84,6 @@ class Slice(Load):
         self.duration = duration
         self.features = None
 
-    def __json_encode__(self):
-        return {'y': self.y, 'sr': self.sr,
-                'offset': self.offset, 'duration': self.duration, 'features': dumps(self.features)}
-
-    def __json_decode__(self, **attrs):
-        self.y = attrs['y']
-        self.sr = attrs['sr']
-        self.offset = attrs['offset']
-        self.duration = attrs['duration']
-        self.features = loads(attrs['features'])
-
 class beatTrack():
     def __init__(self, y, sr):
         '''
@@ -109,13 +98,6 @@ class beatTrack():
 
     def __iter__(self):
         return iter([self.tempo, self.beats])
-
-    def __json_encode__(self):
-        return {'tempo': self.tempo, 'beats': self.beats}
-
-    def __json_decode__(self, **attrs):
-        self.tempo = attrs['tempo']
-        self.beats = attrs['beats']
 
 def load_song(path, **kwargs):
     '''

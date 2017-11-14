@@ -21,6 +21,7 @@ preview_ = False
 verbose_ = True
 
 supported_ext = ['.mp3', '.wav']
+db_dir = 'db/'
 temp_dir = 'audio/_temp'
 
 def main():
@@ -61,10 +62,14 @@ def main():
 
     preview_ and os.makedirs(temp_dir, exist_ok=True)
 
+    genre_db_dir = os.path.join(db_dir, args.genre)
+    if not os.path.exists(genre_db_dir):
+        os.makedirs(genre_db_dir)
+
     train(args.genre, args.dir)
     return
 
-def train(genre, dir, n_beats=16):
+def train(genre, load_dir, n_beats=16):
     '''
     This is the main driver for now.
     This function takes a directory and scans it for all of its songs.
@@ -77,8 +82,10 @@ def train(genre, dir, n_beats=16):
     :return: None
     '''
     mp3s = []
-    db = TinyDB(os.path.join('audio', ''.join(genre + '-' + str(datetime.now())) + '.json'))
-    target = os.path.abspath(dir)
+
+    db = TinyDB(os.path.join(db_dir, genre, ''.join(genre + '-' + str(datetime.now())) + '.json'))
+
+    target = os.path.abspath(load_dir)
     for root, subs, files in os.walk(target):
         for f in files:
             ext = os.path.splitext(f)[1]
@@ -89,24 +96,29 @@ def train(genre, dir, n_beats=16):
 
     songs = []
     update = update_info(len(mp3s))
+    succ_count = 0
     fail_count = 0
     for m in mp3s:
         try:
             song = analyze_song(m, genre, n_beats, update)
-            json = jt.dumps(song)
+            json = {'{}'.format(succ_count): jt.dumps(song)}
             db.insert(json)
-        except IndexError:
+            succ_count += 1
+        except IndexError or TypeError:
             verbose_ and update.state('Failed!', end='\n')
             fail_count += 1
 
     stdout.write('\x1b[2K')
-    print('Analyzed {} songs. Failed {} songs.'.format(len(songs) - fail_count, fail_count))
+    print('Analyzed {} songs. Failed {} songs.'.format(succ_count - fail_count, fail_count))
     clear_folder(temp_dir)
 
+    # for i, item in enumerate(db):
+    #     songs.append(jt.loads(item[str(i)]))
+
     #return the feature scatterplot from the slice to the main script to be stored alongside each
-    for song in songs:
-        verbose_ and update.state('Plotting')
-        kde(song.slice.features)
+    # for song in songs:
+    #     verbose_ and update.state('Plotting')
+    #     kde(song.slice.features)
 
     return
 
