@@ -9,7 +9,11 @@ import json_tricks.np as jt
 
 from song_classes import Song, Slice, beatTrack, Features
 from src.self_similarity import segmentation, slicer
+
+from numpy import average, vstack
+from scipy.misc import imresize
 from src.kernel_density import kde
+import matplotlib.pyplot as plt
 
 from sys import stdout
 from playsound import playsound
@@ -144,21 +148,36 @@ def analyze_song(mp3, genre, n_beats, update):
     song.features = Features(song.slice)
     return song
 
-def train(genre, json, n_beats=16):
+def train(genre, json, n_beats=16, threshhold=0.7):
     db = TinyDB(json)
+    l = len(db)
 
     features = []
-    l = len(db)
+    kps = []
+    shapes = []
+
     printProgressBar(0, l, prefix='Progress:', suffix='Complete', length=50)
     for i, item in enumerate(db):
         song = jt.loads(item[str(i)], cls_lookup_map=globals())
+
         features.append(song.features)
+        kps.append(song.features.kp)
+        shapes.append(song.features.kp.shape)
+
         printProgressBar(i + 1, l, prefix='Progress:', suffix='Complete', length=50)
 
     # return the feature scatterplot from the slice to the main script to be stored alongside each
-    for feature in features:
-        # print(feature.kp.shape)
-        kde(feature)
+    avg_shape = int(average(shapes))
+    resize_kps = []
+    for i, (a, s) in enumerate(zip(kps, shapes)):
+        if (avg_shape / s[0]) < threshhold: continue
+        try:
+            resize_kps.append(imresize(a, (avg_shape, 2)))
+        except ValueError:
+            continue
+
+    print ("Displaying {}/{}".format(len(resize_kps), len(kps)))
+    kde(vstack(resize_kps))
 
 class readable_dir(argparse.Action):
     '''
@@ -181,11 +200,11 @@ class readable_file(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         prospective_path=values
         if not os.path.exists(prospective_path):
-            raise argparse.ArgumentTypeError('readable_dir:{0} is not a valid path'.format(prospective_path))
+            raise argparse.ArgumentTypeError('readable_file:{0} is not a valid path'.format(prospective_path))
         if os.access(prospective_path, os.R_OK):
             setattr(namespace,self.dest,prospective_path)
         else:
-            raise argparse.ArgumentTypeError('readable_dir:{0} is not a valid path'.format(prospective_path))
+            raise argparse.ArgumentTypeError('readable_file:{0} is not a valid path'.format(prospective_path))
 
 class update_info(object):
     def __init__(self, steps):
