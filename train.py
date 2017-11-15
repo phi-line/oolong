@@ -7,10 +7,10 @@ from tinydb import TinyDB
 from datetime import datetime
 import json_tricks.np as jt
 
-from self_similarity import segmentation, slicer
-from song_classes import Song, Slice, beatTrack
-from features import Features
-from kernel_density import kde
+from src.self_similarity import segmentation, slicer
+from src.song_classes import Song, Slice, beatTrack
+from src.features import Features
+from src.kernel_density import kde
 
 from sys import stdout
 from playsound import playsound
