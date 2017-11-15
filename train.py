@@ -1,24 +1,22 @@
 from __future__ import print_function
 
 import os
-import sys
 import argparse
 
-from tinydb import TinyDB, Query
+from tinydb import TinyDB
 from datetime import datetime
 import json_tricks.np as jt
-
-from playsound import playsound
 
 from self_similarity import segmentation, slicer
 from song_classes import Song, Slice, beatTrack
 from features import Features
-from kernel_density import kde, kd_feature
+from kernel_density import kde
 
-import matplotlib.pyplot as plt
+from sys import stdout
+from playsound import playsound
 
-load_dir_ = None
-db_dir_ = None
+load_dir_ = ''
+db_dir_ = ''
 preview_ = False
 verbose_ = True
 
@@ -62,7 +60,7 @@ def main():
     load_dir_ and preview_ and os.makedirs(temp_dir, exist_ok=True)
 
     if db_dir_:
-        genre_db_dir = os.path.join(db_dir, args.genre)
+        genre_db_dir = os.path.join(db_dir_, args.genre)
         if not os.path.exists(genre_db_dir):
             os.makedirs(genre_db_dir, exist_ok=True)
 
@@ -84,7 +82,8 @@ def load(genre, load_dir, n_beats=16):
     '''
     mp3s = []
 
-    db = TinyDB(os.path.join(db_dir, genre, ''.join(genre + '-' + str(datetime.now())) + '.json'))
+    name = os.path.basename(os.path.normpath(load_dir))
+    db = TinyDB(os.path.join(db_dir, genre, ''.join(name + '-' + str(datetime.now())) + '.json'))
 
     target = os.path.abspath(load_dir)
     for root, subs, files in os.walk(target):
@@ -112,22 +111,6 @@ def load(genre, load_dir, n_beats=16):
     print('Analyzed {} songs. Failed {} songs.'.format(succ_count - fail_count, fail_count))
     clear_folder(temp_dir)
     return
-
-def train(genre, json, n_beats=16):
-    db = TinyDB(json)
-
-    features = []
-    l = len(db)
-    printProgressBar(0, l, prefix='Progress:', suffix='Complete', length=50)
-    for i, item in enumerate(db):
-        song = jt.loads(item[str(i)])
-        features.append(song.features)
-        printProgressBar(i + 1, l, prefix='Progress:', suffix='Complete', length=50)
-
-    # return the feature scatterplot from the slice to the main script to be stored alongside each
-    for feature in features:
-        # print(feature.kp.shape)
-        kde(feature)
 
 def analyze_song(mp3, genre, n_beats, update):
     '''
@@ -165,6 +148,22 @@ def analyze_song(mp3, genre, n_beats, update):
     song.features = Features(song.slice)
     return song
 
+def train(genre, json, n_beats=16):
+    db = TinyDB(json)
+
+    features = []
+    l = len(db)
+    printProgressBar(0, l, prefix='Progress:', suffix='Complete', length=50)
+    for i, item in enumerate(db):
+        song = jt.loads(item[str(i)])
+        features.append(song.features)
+        printProgressBar(i + 1, l, prefix='Progress:', suffix='Complete', length=50)
+
+    # return the feature scatterplot from the slice to the main script to be stored alongside each
+    for feature in features:
+        # print(feature.kp.shape)
+        kde(feature)
+
 class readable_dir(argparse.Action):
     '''
     This class validates a given directory and raises an exception if the directory is invalid.
@@ -192,7 +191,6 @@ class readable_file(argparse.Action):
         else:
             raise argparse.ArgumentTypeError('readable_dir:{0} is not a valid path'.format(prospective_path))
 
-from sys import stdout
 class update_info(object):
     def __init__(self, steps):
         '''
