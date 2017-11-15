@@ -132,13 +132,11 @@ def analyze_song(mp3, genre, n_beats, update):
 
     # first send the batch to the trainer function to analyze song for it's major segments
     verbose_ and update.state(status='Segmenting')
-    duration = (60 / song.beat_track.tempo) * n_beats  # beats per second
     song.segments = segmentation(song=song)
 
     # then take a N beat slice from the spectrogram that is from the most major segment
     verbose_ and update.state(status='Slicing')
-    max_pair = slicer(song, duration)
-    song.slice = Slice(song.path, offset=max_pair[0], duration=duration)
+    song.slice = slicer(song, n_beats, duration=3)
     preview_ and preview_slice(song)
 
     # gather the features from the slice

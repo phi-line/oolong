@@ -2,7 +2,9 @@ from __future__ import print_function
 import librosa
 import librosa.display
 
-def slicer(song, duration):
+from song_classes import Slice, beatTrack
+
+def slicer(song, n_beats=16, duration=0):
     '''
     Takes in a song and its segments and computes the largest total segment in the dictionary.
     To do this it sums up each of the dictionary entries using that disgusting(tm) comprehension below.
@@ -10,13 +12,21 @@ def slicer(song, duration):
     It then takes the max dictionary entry and returns the segment with the bounds.
 
     :param song: (Song)       | song to slice
-    :param duration: (float)  | duration to 'record' (in seconds)
-    :return: max_pair (tuple) | the segment with the maximum bounds
+    :param duration: (float)  | min duration (in seconds)
+    :return: slice (Slice)    | segmented slice
     '''
     largest_seg = max(song.segments.items(), key=lambda x: sum([z[1]-z[0] for z in x[1] if z[1]-z[0] >= duration]))[1]
     max_pair = tuple(max(largest_seg, key=lambda pair: pair[1]-pair[0]))
 
-    return max_pair
+    slice = Slice(song.path, offset=max_pair[0], duration=max_pair[1])
+
+    perc_y = librosa.effects.percussive(slice.y)
+    beat_track = beatTrack(y=perc_y, sr=song.load.sr)
+
+    end_frame = librosa.frames_to_samples(beat_track.beats[n_beats])[0]
+    slice.y = slice.y[:end_frame]
+
+    return slice
 
 def segmentation(song, display=False):
     '''
