@@ -1,6 +1,7 @@
 *.pyc
 .idea/
 __pycache__/
+db/
 audio/
 drencrom/
 .DS_Store

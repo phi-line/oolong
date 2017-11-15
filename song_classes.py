@@ -1,8 +1,10 @@
-import numpy as np
+from json_tricks.np import load
 
 # Loading songs from a path
 import os
 from librosa import load, beat, output
+
+from self_similarity import slicer
 
 class Song:
     def __init__(self, name, path):
@@ -18,14 +20,24 @@ class Song:
         :attr beat_track: (beatTrack) | beat track from Librosa's beat.beat_track()
         :attr segments: (dict)        | dictionary of the segments of a song and their bounds as tuples
         :attr slice: (Slice)          | variant of Load that takes a slice of a song at an offset and duration
+        :attr: features: (Features)   | class to store feature scatterplot
         '''
         self.name = name
         self.path = path
         self.load = Load(path)
         self.genre = None
-        self.beat_track = None
         self.segments = None
+        self.beat_track = None
         self.slice = None
+        self.features = None
+
+    def __json_encode__(self):
+        return {'name': self.name, 'path': self.path, 'genre': self.genre,
+                'segments': dict([(str(k), v) for k, v in self.segments.items()]),
+                'beat_track': self.beat_track, 'features': self.features}
+
+    def __json_decode__(self, **attrs):
+        self.features = attrs['features']
 
 class Load:
     def __init__(self, path, **kwargs):
@@ -63,20 +75,18 @@ class Slice(Load):
         :param path: (string)       | path to load
         :param offset: (float)      | offset to start load (in seconds)
         :param duration: (float)    | duration to 'record' (in seconds)
-        :attr: features: (Features) | class to store feature scatterplot
         '''
         super().__init__(path, offset=offset, duration=duration)
         self.offset = offset
         self.duration = duration
-        self.features = None
 
 class beatTrack():
     def __init__(self, y, sr):
         '''
         Generates a Librosa beat.beat_track() for the song.
 
-        :param y: (numpy.ndarray) | audio time series
-        :param sr: (int)          | sample rate
+        :param tempo: (float) | beats per minute
+        :param beats: (list)  | list of beat frames
         '''
         tempo, beats = beat.beat_track(y=y, sr=sr, trim=False)
         self.tempo = tempo
