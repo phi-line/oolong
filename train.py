@@ -7,21 +7,20 @@ from tinydb import TinyDB
 from datetime import datetime
 import json_tricks.np as jt
 
+from song_classes import Song, Slice, beatTrack, Features
 from src.self_similarity import segmentation, slicer
-from src.song_classes import Song, Slice, beatTrack
-from src.features import Features
 from src.kernel_density import kde
 
 from sys import stdout
 from playsound import playsound
 
 load_dir_ = ''
-db_dir_ = ''
+ldb_dir_ = ''
 preview_ = False
 verbose_ = True
 
 supported_ext = ['.mp3', '.wav']
-db_dir = 'db/'
+db_root = 'db/'
 temp_dir = 'audio/_temp'
 
 def main():
@@ -46,7 +45,7 @@ def main():
     parser.add_argument("-l", "--load", help="(path) from root to folder containing song files to analyze",
                         metavar="[load dir]", action=readable_dir, dest="load_dir")
     parser.add_argument("-t", "--train", help="load pre-analyzed songs from database",
-                        metavar="[train dir]", action=readable_file, dest="db_dir")
+                        metavar="[train dir]", action=readable_file, dest="ldb_dir")
     parser.add_argument("-p", "--preview", help="play a preview of the slice while scanning",
                         action="store_true")
     args = parser.parse_args()
@@ -54,18 +53,17 @@ def main():
         return
 
     global load_dir_; load_dir_ = args.load_dir
-    global db_dir_; db_dir_ = args.db_dir
+    global ldb_dir_; ldb_dir_ = args.ldb_dir
     global preview_; preview_ = args.preview
 
     load_dir_ and preview_ and os.makedirs(temp_dir, exist_ok=True)
 
-    if db_dir_:
-        genre_db_dir = os.path.join(db_dir_, args.genre)
-        if not os.path.exists(genre_db_dir):
-            os.makedirs(genre_db_dir, exist_ok=True)
+    genre_db_dir = os.path.join(db_root, args.genre)
+    if not os.path.exists(genre_db_dir):
+        os.makedirs(genre_db_dir, exist_ok=True)
 
     load_dir_ and load(args.genre, args.load_dir)
-    db_dir_ and train(args.genre, args.db_dir)
+    ldb_dir_ and train(args.genre, args.ldb_dir)
     return
 
 def load(genre, load_dir, n_beats=16):
@@ -83,7 +81,7 @@ def load(genre, load_dir, n_beats=16):
     mp3s = []
 
     name = os.path.basename(os.path.normpath(load_dir))
-    db = TinyDB(os.path.join(db_dir, genre, ''.join(name + '-' + str(datetime.now())) + '.json'))
+    db = TinyDB(os.path.join(db_root, genre, ''.join(name + '-' + str(datetime.now())) + '.json'))
 
     target = os.path.abspath(load_dir)
     for root, subs, files in os.walk(target):
@@ -155,7 +153,7 @@ def train(genre, json, n_beats=16):
     l = len(db)
     printProgressBar(0, l, prefix='Progress:', suffix='Complete', length=50)
     for i, item in enumerate(db):
-        song = jt.loads(item[str(i)])
+        song = jt.loads(item[str(i)], cls_lookup_map=globals())
         features.append(song.features)
         printProgressBar(i + 1, l, prefix='Progress:', suffix='Complete', length=50)
 

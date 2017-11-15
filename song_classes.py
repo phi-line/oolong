@@ -4,7 +4,7 @@ from json_tricks.np import load
 import os
 from librosa import load, beat, output
 
-from self_similarity import slicer
+from src.features import getFeatures
 
 class Song:
     def __init__(self, name, path):
@@ -94,6 +94,20 @@ class beatTrack():
 
     def __iter__(self):
         return iter([self.tempo, self.beats])
+
+class Features:
+    def __init__(self, slice):
+        '''
+        Features takes a slice and uses CENSURE image detection to create a scatterplot of the notable features.
+        Read more here: https://link.springer.com/chapter/10.1007/978-3-540-88693-8_8
+
+        :param slice: (Slice)     | slice to find features for
+        :attr detector: (CENSURE) | CENSURE image detector
+        :attr kp: (numpy.ndarray) | feature scatterplot
+        '''
+        detector, kp = getFeatures(slice)
+        self.detector = detector
+        self.kp = kp
 
 def load_song(path, **kwargs):
     '''
