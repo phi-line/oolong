@@ -10,7 +10,7 @@ import json_tricks.np as jt
 from song_classes import Song, Slice, beatTrack, Features
 from src.self_similarity import segmentation, slicer
 
-from numpy import average, vstack
+from numpy import vstack
 from scipy.misc import imresize
 from src.kernel_density import kde
 import matplotlib.pyplot as plt
@@ -105,8 +105,8 @@ def load(genre, load_dir, n_beats=16):
             json = {'{}'.format(succ_count): jt.dumps(song)}
             db.insert(json)
             succ_count += 1
-        except IndexError or TypeError:
-            verbose_ and update.state('Failed!', end='\n')
+        except IndexError or TypeError or ValueError as e:
+            verbose_ and update.state('{}!!!'.format(e), end='\n')
             fail_count += 1
 
     stdout.write('\x1b[2K')
@@ -148,7 +148,7 @@ def analyze_song(mp3, genre, n_beats, update):
     song.features = Features(song.slice)
     return song
 
-def train(genre, json, n_beats=16, threshhold=0.7):
+def train(genre, json, n_beats=16, threshhold=0.1):
     db = TinyDB(json)
     l = len(db)
 
@@ -167,12 +167,13 @@ def train(genre, json, n_beats=16, threshhold=0.7):
         printProgressBar(i + 1, l, prefix='Progress:', suffix='Complete', length=50)
 
     # return the feature scatterplot from the slice to the main script to be stored alongside each
-    avg_shape = int(average(shapes))
+    avg_shape = int(sum([p[0] for p in shapes]) / len(shapes))
     resize_kps = []
     for i, (a, s) in enumerate(zip(kps, shapes)):
-        if (avg_shape / s[0]) < threshhold: continue
+        ratio = (avg_shape / s[0])
+        if abs(1 - ratio) > threshhold: continue
         try:
-            resize_kps.append(imresize(a, (avg_shape, 2)))
+            resize_kps.append(imresize(a, (avg_shape, 2), interp="nearest"))
         except ValueError:
             continue
 
@@ -279,7 +280,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 2, 
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
     filledLength = int(length * iteration // total)
     bar = fill * filledLength + '-' * (length - filledLength)
-    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = '\r')
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
     # Print New Line on Complete
     if iteration == total:
         print()

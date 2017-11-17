@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def kde(kp, bandwidth=4.0):
+def kde(kp, bandwidth=2.0):
     '''
     Takes in a Feature class and plots a kernel density estimator from it's scatterplot
 

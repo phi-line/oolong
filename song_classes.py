@@ -88,7 +88,7 @@ class beatTrack():
         :param tempo: (float) | beats per minute
         :param beats: (list)  | list of beat frames
         '''
-        tempo, beats = beat.beat_track(y=y, sr=sr, trim=False)
+        tempo, beats = beat.beat_track(y=y, sr=sr, trim=False, start_bpm=160)
         self.tempo = tempo
         self.beats = beats
 
