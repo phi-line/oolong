@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import sqrt
 import matplotlib.pyplot as plt
 
 def kde(kp, bandwidth=2.0):
@@ -9,7 +10,8 @@ def kde(kp, bandwidth=2.0):
     :param bandwidth: (float)        | 'resolution' for the KDE. gaussian type blurring
     :return: None
     '''
-    xx, yy, zz = kd_feature(kp, bandwidth, metric='manhattan')
+    xbins = complex(sqrt(kp.shape[0]))
+    xx, yy, zz = kd_feature(kp, bandwidth, xbins=xbins, metric='manhattan')
     plt.pcolormesh(xx, yy, zz)  # , cmap=plt.cm.gist_heat)
 
     # detector = features.detector
