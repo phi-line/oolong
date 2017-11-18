@@ -1,7 +1,8 @@
 import numpy as np
+from numpy import sqrt
 import matplotlib.pyplot as plt
 
-def kde(features, bandwidth=4.0):
+def kde(kp, bandwidth=2.0):
     '''
     Takes in a Feature class and plots a kernel density estimator from it's scatterplot
 
@@ -9,13 +10,13 @@ def kde(features, bandwidth=4.0):
     :param bandwidth: (float)        | 'resolution' for the KDE. gaussian type blurring
     :return: None
     '''
-    kp = features.kp
-    detector = features.detector
-
-    xx, yy, zz = kd_feature(kp, bandwidth, metric='manhattan')
-
+    xbins = complex(sqrt(kp.shape[0]))
+    xx, yy, zz = kd_feature(kp, bandwidth, xbins=xbins, metric='manhattan')
     plt.pcolormesh(xx, yy, zz)  # , cmap=plt.cm.gist_heat)
-    plt.scatter(x=kp[:, 1], y=kp[:, 0], s=2 ** detector.scales, facecolor='white', alpha=.5)
+
+    # detector = features.detector
+    # plt.scatter(x=kp[:, 1], y=kp[:, 0], s=2 ** detector.scales, facecolor='white', alpha=.5)
+
     plt.axis('off')
     plt.show()
 

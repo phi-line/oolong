@@ -9,7 +9,11 @@ import json_tricks.np as jt
 
 from song_classes import Song, Slice, beatTrack, Features
 from src.self_similarity import segmentation, slicer
+
+from numpy import vstack
+from scipy.misc import imresize
 from src.kernel_density import kde
+import matplotlib.pyplot as plt
 
 from sys import stdout
 from playsound import playsound
@@ -101,8 +105,8 @@ def load(genre, load_dir, n_beats=16):
             json = {'{}'.format(succ_count): jt.dumps(song)}
             db.insert(json)
             succ_count += 1
-        except IndexError or TypeError:
-            verbose_ and update.state('Failed!', end='\n')
+        except IndexError or TypeError or ValueError as e:
+            verbose_ and update.state('{}!!!'.format(e), end='\n')
             fail_count += 1
 
     stdout.write('\x1b[2K')
@@ -132,13 +136,11 @@ def analyze_song(mp3, genre, n_beats, update):
 
     # first send the batch to the trainer function to analyze song for it's major segments
     verbose_ and update.state(status='Segmenting')
-    duration = (60 / song.beat_track.tempo) * n_beats  # beats per second
     song.segments = segmentation(song=song)
 
     # then take a N beat slice from the spectrogram that is from the most major segment
     verbose_ and update.state(status='Slicing')
-    max_pair = slicer(song, duration)
-    song.slice = Slice(song.path, offset=max_pair[0], duration=duration)
+    song.slice = slicer(song, n_beats, duration=3)
     preview_ and preview_slice(song)
 
     # gather the features from the slice
@@ -146,21 +148,37 @@ def analyze_song(mp3, genre, n_beats, update):
     song.features = Features(song.slice)
     return song
 
-def train(genre, json, n_beats=16):
+def train(genre, json, n_beats=16, threshhold=0.1):
     db = TinyDB(json)
+    l = len(db)
 
     features = []
-    l = len(db)
+    kps = []
+    shapes = []
+
     printProgressBar(0, l, prefix='Progress:', suffix='Complete', length=50)
     for i, item in enumerate(db):
         song = jt.loads(item[str(i)], cls_lookup_map=globals())
+
         features.append(song.features)
+        kps.append(song.features.kp)
+        shapes.append(song.features.kp.shape)
+
         printProgressBar(i + 1, l, prefix='Progress:', suffix='Complete', length=50)
 
     # return the feature scatterplot from the slice to the main script to be stored alongside each
-    for feature in features:
-        # print(feature.kp.shape)
-        kde(feature)
+    avg_shape = int(sum([p[0] for p in shapes]) / len(shapes))
+    resize_kps = []
+    for i, (a, s) in enumerate(zip(kps, shapes)):
+        ratio = (avg_shape / s[0])
+        if abs(1 - ratio) > threshhold: continue
+        try:
+            resize_kps.append(imresize(a, (avg_shape, 2), interp="nearest"))
+        except ValueError:
+            continue
+
+    print ("Displaying {}/{}".format(len(resize_kps), len(kps)))
+    kde(vstack(resize_kps))
 
 class readable_dir(argparse.Action):
     '''
@@ -183,11 +201,11 @@ class readable_file(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         prospective_path=values
         if not os.path.exists(prospective_path):
-            raise argparse.ArgumentTypeError('readable_dir:{0} is not a valid path'.format(prospective_path))
+            raise argparse.ArgumentTypeError('readable_file:{0} is not a valid path'.format(prospective_path))
         if os.access(prospective_path, os.R_OK):
             setattr(namespace,self.dest,prospective_path)
         else:
-            raise argparse.ArgumentTypeError('readable_dir:{0} is not a valid path'.format(prospective_path))
+            raise argparse.ArgumentTypeError('readable_file:{0} is not a valid path'.format(prospective_path))
 
 class update_info(object):
     def __init__(self, steps):
@@ -262,7 +280,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 2, 
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
     filledLength = int(length * iteration // total)
     bar = fill * filledLength + '-' * (length - filledLength)
-    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = '\r')
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
     # Print New Line on Complete
     if iteration == total:
         print()
