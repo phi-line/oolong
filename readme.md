@@ -1,5 +1,9 @@
 ## What is oolong?
-This project aims to classify electronic music. It uses libraries like librosa, sci-kit image and sci-kit learn to collect data and form models that represent songs. Currently, a Kernel Density Estimator is used to represent a genre:
+This project aims to generate training data for music genre classification. By generating music ML training data though the use of computer vision feature fingerprinting techniques, we can do things like:
+* retrieve based on matched fingerprints (similar to Shazam, Soundhound, etc.)
+* coallece those fingerprints to understand patterns of features, unique to a genre of music
+
+I generated features for the detected "chorus" of electronic songs found on the internet. Here's what those features look like, coallesced into a Kernel Density Estimation, colored by density:
 
 |  **House**  |  **Electro**  |  **Drum and Bass**  |
 |:---:|:---:|:---:|
@@ -31,7 +35,7 @@ Usage: `train.py genre --load folder`
 
 This process can take a while depending on the amount of songs you are scanning in. Each song takes ~20 seconds. Each song will fill the nested class structure found in `song_classes.py`. The output database will be a collection of songs stored in JSON format.
 
-**Training a density model for a genre**:
+**Generating a density model for a genre**:
 
 Usage: `train.py genre --train db_path`
 > Running this example will read in from the database JSON. Oolong will now generate a Kernel Density Estimator and display it back to the user. <!--More info-->
